@@ -1,0 +1,18 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icons/cam_pause.png</file>
+        <file>icons/cam_play.png</file>
+        <file>icons/cam_stop.png</file>
+        <file>icons/cam_tab.png</file>
+        <file>icons/img_res.png</file>
+        <file>icons/img_tab.png</file>
+        <file>icons/loader.gif</file>
+        <file>icons/menu_tab.png</file>
+        <file>icons/neuro_e_icon.png</file>
+        <file>icons/save.png</file>
+        <file>icons/show.png</file>
+        <file>icons/table.png</file>
+        <file>icons/unshow.png</file>
+        <file>icons/untable.png</file>
+    </qresource>
+</RCC>
