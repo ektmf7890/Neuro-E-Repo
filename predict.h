@@ -6,9 +6,7 @@
 #include <nrtexe.h>
 #include <ui_mainwindow.h>
 
-nrt::NDBuffer cla_get_resized_img_buffer(cv::Mat ORG_IMG);
-vector<std::string> cla_get_cls_prob_vec (nrt::NDBuffer outputs);
-std::string cla_get_pred_cls (nrt::NDBuffer outputs);
-cv::Mat cla_get_pred_img(nrt::NDBuffer outputs, cv::Mat ORG_IMG);
+nrt::NDBuffer get_img_buffer(cv::Mat ORG_IMG);
+nrt::NDBuffer seg_execute (nrt::NDBuffer image_buff);
 
 #endif // PREDICT_H

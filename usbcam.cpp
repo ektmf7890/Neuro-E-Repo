@@ -122,12 +122,36 @@ void UsbCam::selectCam() {
     selectDlg->setLayout(dlgVLayout);
     if (selectDlg->exec() == QDialog::Accepted) {
         idx = camList->currentRow();
+
+        // Index that must be sent to the video cap object is listed in /dev/vedio*
+        std::string device_path = cameras.at(idx).deviceName().toStdString();
+        std::size_t i = device_path.find_last_of("/");
+        std::string device_name = device_path.substr(i+1, device_path.length());
+
+        std::regex re("[^0-9]*([0-9]+)");
+        std::smatch match;
+        std::string device_num;
+        if (std::regex_match(device_name, match, re)){
+            for (size_t i = 0; i < match.size(); i++) {
+                device_num = match[i];
+             }
+        }
+
+        int device_idx = -1;
+        try {
+            device_idx = std::stoi(device_num);
+        } catch (const std::exception& expn) {
+            std::cout << expn.what() << ": Out of integer's range\n";
+        } catch (...) {
+            std::cout << ": Unknown error\n";
+        }
+
         qDebug() << "User Select:" << cameras.at(idx).description();
         int w = resValue.at(resCombobox->currentIndex()).first;
         int h = resValue.at(resCombobox->currentIndex()).second;
         int fps = fpsLineEdit->text().toInt();
         qDebug() << "W: " << w << ", " << "H: " << h << ", " << "FPS: " << fps;
-        setCam(idx, w, h, fps);
+        setCam(device_idx, w, h, fps);
     }
     else
         return;

@@ -4,10 +4,6 @@
 #define TERM_MIN 0.0
 #define TERM_MAX 60.0
 
-#define SIZE_THRES_WIDTH_COL 2
-#define SIZE_THRES_CONJ_COL 2
-#define SIZE_THRES_HEIGHT_COL 2
-
 const string PathSeparator = QString(QDir::separator()).toStdString();
 /*
 #ifdef _WIN32
@@ -23,6 +19,13 @@ const string PRED_FOL = "pred" + PathSeparator;
 QVector<QColor> COLOR_VECTOR;
 
 extern int PROB_IDX, PRED_IDX, CAM_IDX, ANO_IDX;
+
+int COLOR_COL = 0, NAME_COL = 1, PROB_THRES_COL = 5, WIDTH_COL = 2, HEIGHT_COL = 4, AND_OR_COL = 3;
+cv::Scalar red(0, 0, 255);
+cv::Scalar green(0, 255, 0);
+cv::Scalar blue(255, 0, 0);
+cv::Scalar white(255, 255, 255);
+cv::Scalar black(0, 0, 0);
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -753,10 +756,10 @@ void MainWindow::setClassTable(bool flag) {
                 int width = *size_threshold_buf.get_at_ptr<int>(cls_idx, 1);
                 int conjunction = *size_threshold_buf.get_at_ptr<int>(cls_idx, 2);
 
-                for (int col = SIZE_THRES_WIDTH_COL; col <= SIZE_THRES_HEIGHT_COL; col++) {
-                    if (col != SIZE_THRES_CONJ_COL) {
+                for (int col = WIDTH_COL; col <= HEIGHT_COL; col++) {
+                    if (col != AND_OR_COL) {
                         QTableWidgetItem *newItem = new QTableWidgetItem(0);
-                        newItem->setText(QString::number(((col != SIZE_THRES_WIDTH_COL) ? width : height)));
+                        newItem->setText(QString::number(((col != WIDTH_COL) ? width : height)));
                         newItem->setTextAlignment(Qt::AlignCenter);
                         ui->tableWidget_class->setItem(cls_idx, col, newItem);
                     }
@@ -859,6 +862,7 @@ void MainWindow::setClassTable(bool flag) {
     if (model_type == "Segmentation" || model_type == "Detection") {
         int row_cnt = ui->tableWidget_class->rowCount();
 
+        /*
         for (int i = 0; i < row_cnt; i++) {
             QWidget *pWidget = new QWidget();
 
@@ -877,14 +881,14 @@ void MainWindow::setClassTable(bool flag) {
 
             ui->tableWidget_class->setCellWidget(i, 5, pWidget);
         }
+        */
 
-
-//        for (int i = 0; i < row_cnt; i++) {
-//            QTableWidgetItem *newItem = new QTableWidgetItem(0);
-//            newItem->setText(QString::number(0) + QString("%"));
-//            newItem->setTextAlignment(Qt::AlignCenter);
-//            ui->tableWidget_class->setItem(i, 5, newItem);
-//        }
+        for (int i = 0; i < row_cnt; i++) {
+            QTableWidgetItem *newItem = new QTableWidgetItem(0);
+            newItem->setText(QString::number(0) + QString("%"));
+            newItem->setTextAlignment(Qt::AlignCenter);
+            ui->tableWidget_class->setItem(i, 5, newItem);
+        }
     }
 
     // Set Sensitivity (ANO) (Column = 2)
@@ -1053,8 +1057,469 @@ void MainWindow::setSaveStautus()
     qDebug() << "CAM Mode) Request to save";
 }
 
-void MainWindow::showResult()
-{
+void MainWindow::claSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vector<std::string> &new_row){
+    nrt::Status status;
+
+    nrt::NDBuffer output_cam;
+    nrt::NDBuffer output_prob;
+    nrt::NDBuffer output_pred;
+    nrt::NDBuffer thresholded_pred;
+
+    if (CAM_IDX != -1) {
+        nrt::NDBuffer cam_colormap;
+        output_cam = outputs.get_at(CAM_IDX);
+        nrt::Status status = nrt::convert_to_colormap(output_cam, cam_colormap);
+        if (status != nrt::STATUS_SUCCESS) {
+            qDebug() << "convert_to_colormap failed. :" << QString(nrt::get_last_error_msg());
+        }
+
+        nrt::Shape color_map_shape = cam_colormap.get_shape();
+        for (int j = 0; j < color_map_shape.dims[0]; j++) {
+            cv::Mat cam_colormap_mat(
+                    color_map_shape.dims[1],
+                    color_map_shape.dims[2],
+                    CV_8UC3,
+                    (void*)(cam_colormap.get_data_ptr<char>() + (color_map_shape.dims[1] * color_map_shape.dims[2] * color_map_shape.dims[3]) * j));
+
+            cv::resize(cam_colormap_mat, cam_colormap_mat, cv::Size(PRED_IMG.cols, PRED_IMG.rows), 0, 0, cv::INTER_LINEAR);
+            cv::addWeighted(cam_colormap_mat, 0.4, PRED_IMG, 0.6, 0.0, PRED_IMG);
+        }
+    }
+
+    vector<float> cls_prob_vec(get_model_class_num(), 0);
+    if(PROB_IDX != -1) {
+        output_prob = outputs.get_at(PROB_IDX);
+        nrt::Shape output_prob_shape = output_prob.get_shape();
+
+        for(int i=0; i < output_prob_shape.dims[0]; i++) {
+            qDebug() << "probability value for each class : ";
+            for (int j=0; j < output_prob_shape.dims[1]; j++) {
+                float prob = *output_prob.get_at_ptr<float>(i, j);
+                cls_prob_vec[j] = prob;
+                qDebug() << get_model_class_name(i) << " - " << prob;
+            }
+        }
+    }
+
+    std::string pred_cls = "";
+
+    nrt::NDBuffer prob_thres = get_model_prob_threshold();
+    if(PRED_IDX != -1) {
+        output_pred = outputs.get_at(PRED_IDX);
+
+        // Implement getting threshold value from ui dynamically
+        // Add a threshold column in csv
+
+        /*
+        int pred_cla_idx;
+        for (int img_idx = 0; img_idx < output_pred_shape.dims[0]; img_idx++) {
+            pred_cla_idx = *output_pred.get_at_ptr<int>(img_idx);
+            qDebug() << "Prediction class index(Not thresholded): " << QString::number(pred_cla_idx);
+        }
+        pred_cla_name = get_model_class_name(pred_cla_idx);
+
+        int num_idx = ui->tableWidget_class->item(pred_cla_idx, NAME_COL+1)->text().size() - 1;
+        float cur_prob_thres = ui->tableWidget_class->item(pred_cla_idx, NAME_COL+1)->text().left(num_idx).toFloat();
+        qDebug() << ui->tableWidget_class->item(pred_cla_idx, NAME_COL+1)->text().left(num_idx) << cur_prob_thres;
+
+        if ((cla_prob_vec[pred_cla_idx] * 100) < cur_prob_thres)
+            pred_cla_name.toStdString() = String("Unknown");
+
+        ui->edit_show_class->setText(QString(pred_cla_name));
+        result_cla = pred_cla_name.toStdString();
+        */
+        if (prob_thres.empty()){
+            float prob_thres_val = 0.8;
+            status = nrt::prob_map_threshold(output_prob, prob_thres_val, thresholded_pred);
+        }
+        else{
+            status = nrt::prob_map_threshold(output_prob, prob_thres, thresholded_pred);
+        }
+
+        if(status != nrt::STATUS_SUCCESS){
+            qDebug() << "prob map threshold fail";
+            return;
+        }
+
+        nrt::Shape thresholded_pred_shape = thresholded_pred.get_shape();
+
+        for(int i=0; i<thresholded_pred_shape.dims[0]; i++){
+            int cls_idx = *thresholded_pred.get_at_ptr<int>(i);
+            pred_cls = (cls_idx < 0 ? get_model_class_name(cls_idx).toStdString() : "Unknown");
+        }
+    }
+
+    ui->edit_show_class->setText(QString(pred_cls.c_str()));
+
+    // csv new row
+    new_row.push_back(pred_cls);
+
+    for (int cls_idx = 0; cls_idx < cls_prob_vec.size(); cls_idx++) {
+        float cur_rate = cls_prob_vec[cls_idx] * 100;
+        if (cur_rate == 0) {
+            new_row.push_back(std::string("0 %"));
+            continue;
+        }
+        std::ostringstream out;
+        out.precision(2);
+        out << std::fixed << cur_rate;
+        new_row.push_back((out.str() + std::string(" %")));
+    }
+}
+
+void MainWindow::segSetResults(nrt::NDBuffer merged_pred_output, cv::Mat &PRED_IMG, vector<std::string> &new_row){
+    vector<int> seg_blob_cnt(get_model_class_num()-1);
+    vector<float> seg_pixel_rate(get_model_class_num()-1, 0);
+    vector<long long> seg_pixel_cnt(get_model_class_num()-1, 0);
+    long long total_pixel;
+
+    if (!merged_pred_output.empty()) {
+        nrt::Status status;
+
+        // Threshold by size
+        nrt::NDBuffer bounding_rects;
+        nrt::NDBuffer size_threshold_buf = get_model_size_threshold();
+        if (size_threshold_buf.empty()) {
+            size_threshold_buf = nrt::NDBuffer::zeros(nrt::Shape(get_model_class_num(), 3), nrt::DTYPE_INT32);
+            int* thres_ptr = size_threshold_buf.get_at_ptr<int>();
+
+            for (int i = 0; i < ui->tableWidget_class->rowCount(); i++) {
+                if(ui->tableWidget_class->item(i, HEIGHT_COL) && ui->tableWidget_class->item(i, WIDTH_COL) && ui->tableWidget_class->item(i, AND_OR_COL)) {
+                    thres_ptr[3*(i+1) + 0] = ui->tableWidget_class->item(i, HEIGHT_COL)->text().toInt();
+                    thres_ptr[3*(i+1) + 1] = ui->tableWidget_class->item(i, WIDTH_COL)->text().toInt();
+                    thres_ptr[3*(i+1) + 2] = (ui->tableWidget_class->item(i, AND_OR_COL)->text() == "and" ? 0 : 1);
+                    //qDebug() << QString::number(thres_ptr[3*(i+1) + 0]) << QString::number(thres_ptr[3*(i+1) + 1]) << QString::number(thres_ptr[3*(i+1) + 2]);
+                }
+            }
+        }
+        status = nrt::pred_map_threshold_by_size(merged_pred_output, bounding_rects, size_threshold_buf, get_model_class_num());
+        if (status != nrt::STATUS_SUCCESS) {
+            qDebug() << "pred_map_threshold_by_size failed.  : " << QString(nrt::get_last_error_msg());
+        }
+
+        /*
+        nrt::NDBuffer prob_threshold = get_model_prob_threshold();
+        if(prob_threshold.empty()){
+            prob_threshold = nrt::NDBuffer::zeros(nrt::Shape(get_model_class_num()), nrt::DTYPE_FLOAT32);
+
+            float* prob_thres_ptr = prob_threshold.get_at_ptr<float>();
+            for(int i = 0; i < get_model_class_num(); i++) {
+                prob_thres_ptr[i] = 0.95f;
+                qDebug() << get_model_class_name(i) << " prob thres: " << QString::number(prob_thres_ptr[i]);
+            }
+        }
+        */
+
+        // Class Name in Result Image
+        nrt::Shape bounding_rects_shape = bounding_rects.get_shape();
+        for (int j = 0; j < bounding_rects_shape.dims[0]; j++) {
+            int* output_rect_ptr = bounding_rects.get_at_ptr<int>(j);
+            int image_batch_index = output_rect_ptr[0];
+            int rect_x = output_rect_ptr[1];
+            int rect_y = output_rect_ptr[2];
+            int rect_h = output_rect_ptr[3];
+            int rect_w = output_rect_ptr[4];
+            int rect_class_index = output_rect_ptr[5];
+
+            if (rect_class_index < 1)
+                continue;
+            seg_blob_cnt[rect_class_index-1] += 1;
+            int r, g, b;
+            COLOR_VECTOR[rect_class_index-1].getRgb(&r, &g, &b);
+            cv::Scalar class_color_scalar = cv::Scalar(b, g, r);
+            const char* classname = ui->tableWidget_class->item(rect_class_index-1, NAME_COL)->text().toStdString().c_str();
+            if (classname) {
+                //cv::putText(PRED_IMG, classname, cv::Point(rect_x, rect_y), FONT_HERSHEY_SIMPLEX, 1, white, 7);
+                cv::putText(PRED_IMG, classname, cv::Point(rect_x, rect_y), FONT_HERSHEY_SIMPLEX, 1, class_color_scalar, 4);
+            }
+        }
+
+        vector<bool> exist_class(get_model_class_num());
+        // Class Color Pixel in Result Image
+        unsigned char* output_ptr = merged_pred_output.get_at_ptr<unsigned char>(0);
+        int img_h = PRED_IMG.rows;
+        int img_w = PRED_IMG.cols;
+        total_pixel = img_h * img_w;
+        int cur_ofs, cur_class;
+        double alp_src = 0.5, alp_mask = 0.5;
+        auto shape = merged_pred_output.get_shape();
+        for (int h = 0; h < img_h; h++) {
+            cur_ofs = h * img_w;
+            for (int w = 0; w < img_w; w++) {
+                cur_class = output_ptr[cur_ofs + w];
+                if (cur_class < 1)
+                    continue;
+                exist_class[cur_class-1] = true;
+                seg_pixel_cnt[cur_class-1] += 1;
+                QColor cur_class_color = COLOR_VECTOR[cur_class-1];
+                cv::Vec3b pix = PRED_IMG.at<cv::Vec3b>(h, w);
+                pix[2] = (int)(((double)pix[2] * alp_src) + ((double)cur_class_color.red() * alp_mask));
+                pix[1] = (int)(((double)pix[2] * alp_src) + ((double)cur_class_color.green() * alp_mask));
+                pix[0] = (int)(((double)pix[2] * alp_src) + ((double)cur_class_color.blue() * alp_mask));
+                PRED_IMG.at<cv::Vec3b>(h, w) = pix;
+            }
+        }
+        for (int cla_idx = 0; cla_idx < seg_pixel_cnt.size(); cla_idx++)
+            seg_pixel_rate[cla_idx] = (float)seg_pixel_cnt[cla_idx] / (float)total_pixel;
+
+        // Class Name in edit_show_class
+        QString exist_class_string("");
+        for (int i = 0; i < ui->tableWidget_class->rowCount(); i++) {
+            if (exist_class[i]) {
+                QString classname = ui->tableWidget_class->item(i, NAME_COL)->text();
+                if (exist_class_string != QString(""))
+                    exist_class_string += ", ";
+                exist_class_string += classname;
+            }
+        }
+        if (exist_class_string == QString(""))
+            exist_class_string = QString("None");
+        ui->edit_show_class->setText((QString(" ") + exist_class_string));
+    }
+
+    for (int cla_idx = 0; cla_idx < seg_blob_cnt.size(); cla_idx++) {
+        new_row.push_back(to_string(seg_blob_cnt[cla_idx]));
+    }
+
+    for (int cla_idx = 0; cla_idx < seg_pixel_rate.size(); cla_idx++) {
+        float cur_rate = seg_pixel_rate[cla_idx] * 100;
+        if (cur_rate == 0) {
+            new_row.push_back(std::string("0 %"));
+            continue;
+        }
+        std::ostringstream out;
+        out.precision(2);
+        out << std::fixed << cur_rate;
+        new_row.push_back((out.str() + std::string(" %")));
+    }
+}
+
+void MainWindow::detSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vector<std::string> &new_row){
+    vector<int> det_box_cnt(get_model_class_num()-1, 0);
+    vector<float> det_box_prob(get_model_class_num()-1, 0);
+    vector<bool> exist_class(get_model_class_num());
+
+    if ((PRED_IDX != -1) && (PROB_IDX != -1)) {
+        nrt::NDBuffer output_boxes = outputs.get_at(PRED_IDX);
+        nrt::NDBuffer output_prob = outputs.get_at(PROB_IDX);
+        nrt::Shape output_boxes_shape = output_boxes.get_shape();
+
+        nrt::Shape input_image_shape = get_model_input_shape(0);
+        int input_h = PRED_IMG.rows;
+        int input_w = PRED_IMG.cols;
+        double h_ratio = (double)input_image_shape.dims[0] / input_h;
+        double w_ratio = (double)input_image_shape.dims[1] / input_w;
+
+        // Color Box in Result Image
+        const int number_of_boxes = output_boxes_shape.dims[0];
+        const int* bcyxhw_ptr = output_boxes.get_data_ptr<int>();
+        const float* prob_ptr = output_prob.get_data_ptr<float>();
+
+        for (int box_idx = 0; box_idx < number_of_boxes; ++box_idx) {
+            BoundingBox bbox = convert_to_bounding_box(bcyxhw_ptr + box_idx * 6, h_ratio, w_ratio);
+            const float* probs = prob_ptr + box_idx * (get_model_class_num() + 1);
+
+            if (bbox.class_number < 1)
+                continue;
+
+            // Treshold by size
+            int h_thres, w_thres, a_thres;
+            if(ui->tableWidget_class->item(bbox.class_number-1, HEIGHT_COL))
+                h_thres = ui->tableWidget_class->item(bbox.class_number-1, HEIGHT_COL)->text().toInt();
+            else return;
+            if(ui->tableWidget_class->item(bbox.class_number-1, WIDTH_COL))
+                w_thres = ui->tableWidget_class->item(bbox.class_number-1, WIDTH_COL)->text().toInt();
+            else return;
+            if(ui->tableWidget_class->item(bbox.class_number-1, AND_OR_COL))
+                a_thres = (ui->tableWidget_class->item(bbox.class_number-1, AND_OR_COL)->text() == "and" ? 0 : 1);
+            else return;
+
+            if (a_thres == 0) { // AND
+                if ((bbox.box_height < h_thres) && (bbox.box_width < w_thres))
+                    continue;
+            }
+            else {              // OR
+                if ((bbox.box_height < h_thres) || (bbox.box_width < w_thres))
+                    continue;
+            }
+
+            // Threshold by probability
+            float cur_prob = probs[bbox.class_number+1] * 100;
+            string cur_prob_thres_str = "";
+            if(ui->tableWidget_class->item(bbox.class_number-1, PROB_THRES_COL))
+                cur_prob_thres_str = ui->tableWidget_class->item(bbox.class_number-1, PROB_THRES_COL)->text().toStdString();
+            else return;
+
+            cur_prob_thres_str = cur_prob_thres_str.substr(0, cur_prob_thres_str.length()-1);
+            double cur_prob_thres = QString::fromStdString(cur_prob_thres_str).toDouble();
+            if (cur_prob < cur_prob_thres){
+                continue;
+            }
+
+            exist_class[bbox.class_number-1] = true;
+            det_box_cnt[bbox.class_number-1] += 1;
+            det_box_prob[bbox.class_number-1] += cur_prob;
+
+            int r, g, b;
+            COLOR_VECTOR[bbox.class_number-1].getRgb(&r, &g, &b);
+            cv::Scalar class_color_scalar = cv::Scalar(b, g, r);
+            cv::rectangle(PRED_IMG,
+                          cv::Point(bbox.box_center_X - bbox.box_width/2, bbox.box_center_Y - bbox.box_height/2),
+                          cv::Point(bbox.box_center_X + bbox.box_width/2 + (bbox.box_width % 2), bbox.box_center_Y + bbox.box_height / 2 + (bbox.box_height % 2)),
+                          class_color_scalar,
+                          2
+                          );
+            string classname = "";
+            if(ui->tableWidget_class->item(bbox.class_number-1, NAME_COL))
+                classname = ui->tableWidget_class->item(bbox.class_number-1, NAME_COL)->text().toStdString();
+            else return;
+
+            std::ostringstream out;
+            out.precision(2);
+            out << std::fixed << cur_prob;
+            string classprob = string("(") + out.str() + string("%)");
+            classname += classprob;
+            const char* class_string = classname.c_str();
+
+            if (class_string) {
+                cv::putText(PRED_IMG, class_string, cv::Point(bbox.box_center_X - bbox.box_width / 2, bbox.box_center_Y - bbox.box_height / 2), FONT_HERSHEY_SIMPLEX, 1, white, 7);
+                cv::putText(PRED_IMG, class_string, cv::Point(bbox.box_center_X - bbox.box_width / 2, bbox.box_center_Y - bbox.box_height / 2), FONT_HERSHEY_SIMPLEX, 1, class_color_scalar, 4);
+            }
+        }
+
+        // Class Name in edit_show_class
+        QString exist_class_string("");
+        int exist_class_cnt = 0;
+        for (int i = 0; i < ui->tableWidget_class->rowCount(); i++) {
+            if (exist_class[i]) {
+                exist_class_cnt++;
+                QString classname = ui->tableWidget_class->item(i, NAME_COL)->text();
+                if (exist_class_string != QString("")) {
+                    if (exist_class_cnt == 5)
+                        exist_class_string += ",\n";
+                    else
+                        exist_class_string += ", ";
+                }
+                exist_class_string += classname;
+            }
+        }
+        if (exist_class_string == QString(""))
+            exist_class_string = QString("None");
+        ui->edit_show_class->setText((QString(" ") + exist_class_string));
+
+        for (int cla_idx = 0; cla_idx < det_box_cnt.size(); cla_idx++) {
+            new_row.push_back(to_string(det_box_cnt[cla_idx]));
+        }
+        for (int cla_idx = 0; cla_idx < det_box_prob.size(); cla_idx++) {
+            float prob_sum = det_box_prob[cla_idx];
+            if (prob_sum == 0) {
+                new_row.push_back(std::string("0 %"));
+                continue;
+            }
+            float cur_cla_prob = prob_sum / (float)det_box_cnt[cla_idx];
+
+            std::ostringstream out;
+            out.precision(2);
+            out << std::fixed << cur_cla_prob;
+            new_row.push_back((out.str() + std::string(" %")));
+        }
+    }
+}
+
+void MainWindow::ocrSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vector<std::string> &new_row) {
+    if ((PRED_IDX != -1) && (PROB_IDX != -1)) {
+        nrt::Shape input_image_shape = get_model_input_shape(0);
+        int input_h = PRED_IMG.rows;
+        int input_w = PRED_IMG.cols;
+        double h_ratio = (double)input_image_shape.dims[0] / input_h;
+        double w_ratio = (double)input_image_shape.dims[1] / input_w;
+
+        nrt::NDBuffer output_boxes = outputs.get_at(PRED_IDX);
+        nrt::NDBuffer output_prob = outputs.get_at(PROB_IDX);
+        nrt::Shape output_pred_shape = output_boxes.get_shape();
+
+        const int number_of_boxes = output_pred_shape.dims[0];
+        const int* bcyxhw_ptr = output_boxes.get_data_ptr<int>();
+        const float* prob_ptr = output_prob.get_data_ptr<float>();
+
+        vector<BoundingBox> exist_bbox;
+        for (int box_idx = 0; box_idx < number_of_boxes; ++box_idx) {
+            BoundingBox bbox = convert_to_bounding_box(bcyxhw_ptr + box_idx * 6, h_ratio, w_ratio);
+            exist_bbox.push_back(bbox);
+            const float* probs = prob_ptr + box_idx * (get_model_class_num() + 1);
+
+            cv::rectangle(PRED_IMG,
+                          cv::Point(bbox.box_center_X - bbox.box_width / 2, bbox.box_center_Y - bbox.box_height / 2),
+                          cv::Point(bbox.box_center_X + bbox.box_width / 2 + (bbox.box_width & 1), bbox.box_center_Y + bbox.box_height / 2 + (bbox.box_height & 1)),
+                          red,
+                          2
+                          );
+
+            const char* classname = get_model_class_name(bbox.class_number).toStdString().c_str();
+            if (classname) {
+                cv::Size org_size = cv::getTextSize(std::string(classname), cv::FONT_HERSHEY_SIMPLEX, 1.0, 4, 0);
+                double font_scale = (double)bbox.box_height / (double)org_size.height;
+                int scale_gap = (int)((font_scale - 1) * 50);
+                // cv::putText(PRED_IMG, classname, cv::Point(bbox.box_center_X - bbox.box_width / 2, bbox.box_center_Y - bbox.box_height / 2), 0, 1, cv::Scalar(0, 0, 255), 3);
+                cv::putText(PRED_IMG, classname, cv::Point(bbox.box_center_X - (bbox.box_width / 2), bbox.box_center_Y + bbox.box_height + scale_gap), FONT_HERSHEY_SIMPLEX, font_scale, white, 7, 8, false);
+                cv::putText(PRED_IMG, classname, cv::Point(bbox.box_center_X - (bbox.box_width / 2), bbox.box_center_Y + bbox.box_height + scale_gap), FONT_HERSHEY_SIMPLEX, font_scale, red, 4, 8, false);
+            }
+        }
+        sort(exist_bbox.begin(), exist_bbox.end(), bbox_cmp);
+
+        // Set Color in Class List
+        // ui->tableWidget_class->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+        for (int r = 0; r < ui->tableWidget_class->rowCount(); r++) {
+            int colCount = ui->tableWidget_class->columnCount();
+            if ((r == 3) || (r == 6))
+                colCount = 6;
+            for (int c = 0; c < colCount; c++) {
+                ui->tableWidget_class->item(r, c)->setBackgroundColor(QColor(255, 255, 255));
+                ui->tableWidget_class->item(r, c)->setTextColor(QColor(0, 0, 0));
+            }
+        }
+        for (int i = 0; i < exist_bbox.size(); i++) {
+            const char* classname = get_model_class_name(exist_bbox[i].class_number).toStdString().c_str();
+            if (classname) {
+                const char classchar = classname[0];
+                int row = 0, col = 0;
+                if ((classchar >= '0') && (classchar <= '9')) {
+                    row = 0;
+                    col = classchar - '0';
+                }
+                else if ((classchar >= 'A') && (classchar <= 'Z')) {
+                    int order = classchar - 'A';
+                    row = 1 + (int)(order / 10);
+                    col = order % 10;
+                }
+                else if ((classchar >= 'a') && (classchar <= 'z')) {
+                    int order = classchar - 'a';
+                    row = 4 + (int)(order / 10);
+                    col = order % 10;
+                }
+                else {
+                }
+                ui->tableWidget_class->item(row, col)->setBackgroundColor(QColor(255, 0, 0));
+                ui->tableWidget_class->item(row, col)->setTextColor(QColor(255, 255, 255));
+            }
+        }
+
+        // OCR String in edit_show_class
+        QString ocr_string("");
+        for (int i = 0; i < exist_bbox.size(); i++) {
+            QString classname = get_model_class_name(exist_bbox[i].class_number);
+            ocr_string += classname;
+        }
+        ui->edit_show_class->setText(ocr_string);
+        new_row.push_back(ocr_string.toStdString());
+    }
+}
+
+void MainWindow::anomSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vector<std::string> &new_row) {
+
+}
+
+void MainWindow::showResult() {
     cv::Mat ORG_IMG, PRED_IMG;
     std::string cur_inf_img_path; // current inference image path
     int pre_idx;
@@ -1138,383 +1603,67 @@ void MainWindow::showResult()
 
     qDebug() << "Inference Image";
     PRED_IMG = ORG_IMG.clone();
-    /*
-        if (predict(PRED_IMG) == -1) {
-            qDebug() << "Predict Error";
-            return;
-        }
-        */
 
     nrt::NDBufferList outputs;
+    nrt::NDBuffer merged_pred_output; //Segmentation
+//    nrt::NDBuffer merged_prob_output; //Segmentation
 
     qDebug() << "Show Result) Execute";
-    if(get_model_type() == "Classification"){
-        nrt::NDBuffer resized_img_buffer = cla_get_resized_img_buffer(ORG_IMG);
-        auto start = std::chrono::high_resolution_clock::now();
-        outputs = execute(resized_img_buffer);
-        auto end = std::chrono::high_resolution_clock::now();
-    }
-    else if (get_model_type == "Segmentation"){
-        auto start = std::chrono::high_resolution_clock::now();
-        outputs = seg_get_merged_outputs(ORG_IMG);
-        auto end = std::chrono::high_resolution_clock::now();
-    }
-    else{
-        auto start = std::chrono::high_resolution_clock::now();
-        predict(PRED_IMG);
-        auto end = std::chrono::high_resolution_clock::now();
-    }
+    QString model_type = get_model_type();
+    if(get_model_status() == nrt::STATUS_SUCCESS && get_executor_status() == nrt::STATUS_SUCCESS){
+        if(model_type == "Segmentation"){
+            nrt::NDBuffer img_buffer = get_img_buffer(ORG_IMG);
 
-    std::chrono::duration<double, std::milli> inf_time = end - start;
-    ui->edit_show_inf->setText(QString::number(inf_time.count(), 'f', 3));
+            auto start = std::chrono::high_resolution_clock::now();
+//            vector<nrt::NDBuffer> output_vector = seg_execute(img_buffer);
+            merged_pred_output = seg_execute(img_buffer);
+            auto end = std::chrono::high_resolution_clock::now();
+            /*
+            merged_pred_output = output_vector[0];
+            merged_prob_output = output_vector[1];
+            */
 
-    int COLOR_COL = 0, NAME_COL = 1, PROB_THRES_COL = 2;
-    cv::Scalar red(0, 0, 255);
-    cv::Scalar green(0, 255, 0);
-    cv::Scalar blue(255, 0, 0);
-    cv::Scalar white(255, 255, 255);
-    cv::Scalar black(0, 0, 0);
+            std::chrono::duration<double, std::milli> inf_time = end - start;
+            ui->edit_show_inf->setText(QString::number(inf_time.count(), 'f', 3));
+        }
+        else if(model_type == "Classification" || model_type == "Detection" || model_type == "OCR" || model_type == "Anomaly") {
+            nrt::NDBuffer resized_img_buffer = get_img_buffer(ORG_IMG);
+
+            auto start = std::chrono::high_resolution_clock::now();
+            outputs = execute(resized_img_buffer);
+            auto end = std::chrono::high_resolution_clock::now();
+
+            std::chrono::duration<double, std::milli> inf_time = end - start;
+            ui->edit_show_inf->setText(QString::number(inf_time.count(), 'f', 3));
+        }
+    }
+    else {
+        qDebug() << "Model and executor is not loaded.";
+    }
 
     if( get_model_status() == nrt::STATUS_SUCCESS && get_executor_status() == nrt::STATUS_SUCCESS){
-        QString model_type = get_model_type();
-        qDebug() << "Model Type:" << model_type;
+        qDebug() << QString("Model Type:") << model_type;
 
         if (model_type == "Classification") {
-            vector<float> cls_prob_vec = cla_get_cls_prob_vec(outputs);
-            std::string pred_cls = cla_get_pred_cls(outputs);
-            PRED_IMG = cla_get_pred_img(outputs, ORG_IMG);
-
-            ui->edit_show_class->setText(QString(pred_cls));
-
-            // csv new row
-            new_row.push_back(pred_cls);
-
-            for (int cls_idx = 0; cls_idx < cla_prob_vec.size(); cls_idx++) {
-                float cur_rate = cls_prob_vec[cls_idx] * 100;
-                if (cur_rate == 0) {
-                    new_row.push_back(std::string("0 %"));
-                    continue;
-                }
-                std::ostringstream out;
-                out.precision(2);
-                out << std::fixed << cur_rate;
-                new_row.push_back((out.str() + std::string(" %")));
-            }
+            claSetResults(outputs, PRED_IMG, new_row);
         }
         else if (model_type == "Segmentation") {
-            vector<int> seg_blob_cnt(get_model_class_num()-1);
-            vector<float> seg_pixel_rate(get_model_class_num()-1, 0);
-            vector<long long> seg_pixel_cnt(get_model_class_num()-1, 0);
-            long long total_pixel;
-
-            if (PRED_IDX != -1) {
-                nrt::NDBuffer merged_output = outputs.get_at(0);
-                nrt::NDBuffer bounding_rects;
-                nrt::NDBuffer size_threshold_buf = get_model_size_threshold();
-                int WIDTH_COL = 2, HEIGHT_COL = 4, AND_OR_COL = 3;
-                if (size_threshold_buf.empty()) {
-                    size_threshold_buf = nrt::NDBuffer::zeros(nrt::Shape(get_model_class_num(), 3), nrt::DTYPE_INT32);
-                    int* thres_ptr = size_threshold_buf.get_at_ptr<int>();
-                    for (int i = 0; i < ui->tableWidget_class->rowCount(); i++) {
-                        thres_ptr[3*(i+1) + 0] = ui->tableWidget_class->item(i, HEIGHT_COL)->text().toInt();
-                        thres_ptr[3*(i+1) + 1] = ui->tableWidget_class->item(i, WIDTH_COL)->text().toInt();
-                        thres_ptr[3*(i+1) + 2] = (ui->tableWidget_class->item(i, AND_OR_COL)->text() == "and" ? 0 : 1);
-                        //qDebug() << QString::number(thres_ptr[3*(i+1) + 0]) << QString::number(thres_ptr[3*(i+1) + 1]) << QString::number(thres_ptr[3*(i+1) + 2]);
-                    }
-                }
-                nrt::Status status = nrt::pred_map_threshold_by_size(merged_output, bounding_rects, size_threshold_buf, get_model_class_num());
-                if (status != nrt::STATUS_SUCCESS) {
-                    qDebug() << "pred_map_threshold_by_size failed.  : " << QString(nrt::get_last_error_msg());
-                }
-
-                vector<bool> exist_class(get_model_class_num());
-                // Class Name in Result Image
-                nrt::Shape bounding_rects_shape = bounding_rects.get_shape();
-                for (int j = 0; j < bounding_rects_shape.dims[0]; j++) {
-                    int* output_rect_ptr = bounding_rects.get_at_ptr<int>(j);
-                    int image_batch_index = output_rect_ptr[0];
-                    int rect_x = output_rect_ptr[1];
-                    int rect_y = output_rect_ptr[2];
-                    int rect_h = output_rect_ptr[3];
-                    int rect_w = output_rect_ptr[4];
-                    int rect_class_index = output_rect_ptr[5];
-
-                    if (rect_class_index < 1)
-                        continue;
-                    seg_blob_cnt[rect_class_index-1] += 1;
-                    int r, g, b;
-                    COLOR_VECTOR[rect_class_index-1].getRgb(&r, &g, &b);
-                    cv::Scalar class_color_scalar = cv::Scalar(b, g, r);
-                    const char* classname = ui->tableWidget_class->item(rect_class_index-1, NAME_COL)->text().toStdString().c_str();
-                    if (classname) {
-                        //cv::putText(PRED_IMG, classname, cv::Point(rect_x, rect_y), FONT_HERSHEY_SIMPLEX, 1, white, 7);
-                        cv::putText(PRED_IMG, classname, cv::Point(rect_x, rect_y), FONT_HERSHEY_SIMPLEX, 1, class_color_scalar, 4);
-                    }
-                }
-
-                // Class Color Pixel in Result Image
-                unsigned char* output_ptr = merged_output.get_at_ptr<unsigned char>(0);
-                int img_h = PRED_IMG.rows;
-                int img_w = PRED_IMG.cols;
-                total_pixel = img_h * img_w;
-                int cur_ofs, cur_class;
-                double alp_src = 0.5, alp_mask = 0.5;
-                auto shape = merged_output.get_shape();
-                for (int h = 0; h < img_h; h++) {
-                    cur_ofs = h * img_w;
-                    for (int w = 0; w < img_w; w++) {
-                        cur_class = output_ptr[cur_ofs + w];
-                        if (cur_class < 1)
-                            continue;
-                        exist_class[cur_class-1] = true;
-                        seg_pixel_cnt[cur_class-1] += 1;
-                        QColor cur_class_color = COLOR_VECTOR[cur_class-1];
-                        cv::Vec3b pix = PRED_IMG.at<cv::Vec3b>(h, w);
-                        pix[2] = (int)(((double)pix[2] * alp_src) + ((double)cur_class_color.red() * alp_mask));
-                        pix[1] = (int)(((double)pix[2] * alp_src) + ((double)cur_class_color.green() * alp_mask));
-                        pix[0] = (int)(((double)pix[2] * alp_src) + ((double)cur_class_color.blue() * alp_mask));
-                        PRED_IMG.at<cv::Vec3b>(h, w) = pix;
-                    }
-                }
-                for (int cla_idx = 0; cla_idx < seg_pixel_cnt.size(); cla_idx++)
-                    seg_pixel_rate[cla_idx] = (float)seg_pixel_cnt[cla_idx] / (float)total_pixel;
-
-                // Class Name in edit_show_class
-                QString exist_class_string("");
-                for (int i = 0; i < ui->tableWidget_class->rowCount(); i++) {
-                    if (exist_class[i]) {
-                        QString classname = ui->tableWidget_class->item(i, NAME_COL)->text();
-                        if (exist_class_string != QString(""))
-                            exist_class_string += ", ";
-                        exist_class_string += classname;
-                    }
-                }
-                if (exist_class_string == QString(""))
-                    exist_class_string = QString("None");
-                ui->edit_show_class->setText((QString(" ") + exist_class_string));
-            }
-            for (int cla_idx = 0; cla_idx < seg_blob_cnt.size(); cla_idx++) {
-                new_row.push_back(to_string(seg_blob_cnt[cla_idx]));
-            }
-            for (int cla_idx = 0; cla_idx < seg_pixel_rate.size(); cla_idx++) {
-                float cur_rate = seg_pixel_rate[cla_idx] * 100;
-                if (cur_rate == 0) {
-                    new_row.push_back(std::string("0 %"));
-                    continue;
-                }
-                std::ostringstream out;
-                out.precision(2);
-                out << std::fixed << cur_rate;
-                new_row.push_back((out.str() + std::string(" %")));
-            }
+            segSetResults(merged_pred_output, PRED_IMG, new_row);
         }
         else if (model_type == "Detection") {
-            vector<int> det_box_cnt(get_model_class_num()-1, 0);
-            vector<float> det_box_prob(get_model_class_num()-1, 0);
-            if ((PRED_IDX != -1) && (PROB_IDX != -1)) {
-                int WIDTH_COL = 2, HEIGHT_COL = 4, AND_OR_COL = 3;
-                nrt::NDBuffer output_boxes = outputs.get_at(PRED_IDX);
-                nrt::NDBuffer output_prob = outputs.get_at(PROB_IDX);
-                nrt::Shape output_pred_shape = output_boxes.get_shape();
-
-                nrt::Shape input_image_shape = get_model_input_shape(0);
-                int input_h = PRED_IMG.rows;
-                int input_w = PRED_IMG.cols;
-                double h_ratio = (double)input_image_shape.dims[0] / input_h;
-                double w_ratio = (double)input_image_shape.dims[1] / input_w;
-                vector<bool> exist_class(get_model_class_num());
-                // Color Box in Result Image
-                const int number_of_boxes = output_pred_shape.dims[1];
-                const int* bcyxhw_ptr = output_boxes.get_data_ptr<int>();
-                const float* prob_ptr = output_prob.get_data_ptr<float>();
-                for (int box_idx = 0; box_idx < number_of_boxes; ++box_idx) {
-                    BoundingBox bbox = convert_to_bounding_box(bcyxhw_ptr + box_idx * 6, h_ratio, w_ratio);
-                    const float* probs = prob_ptr + box_idx * (get_model_class_num() + 1);
-
-                    if (bbox.class_number < 1)
-                        continue;
-                    int h_thres = ui->tableWidget_class->item(bbox.class_number-1, SIZE_THRES_HEIGHT_COL)->text().toInt();
-                    int w_thres = ui->tableWidget_class->item(bbox.class_number-1, SIZE_THRES_WIDTH_COL)->text().toInt();
-                    int a_thres = (ui->tableWidget_class->item(bbox.class_number-1, SIZE_THRES_CONJ_COL)->text() == "and" ? 0 : 1);
-                    if (a_thres == 0) { // AND
-                        if ((bbox.box_height < h_thres) && (bbox.box_width < w_thres))
-                            continue;
-                    }
-                    else {              // OR
-                        if ((bbox.box_height < h_thres) || (bbox.box_width < w_thres))
-                            continue;
-                    }
-                    float cur_prob = probs[bbox.class_number+1] * 100;
-                    string cur_prob_thres_str = ui->tableWidget_class->item(bbox.class_number-1, 5)->text().toStdString();
-                    cur_prob_thres_str = cur_prob_thres_str.substr(0, cur_prob_thres_str.length()-1);
-                    double cur_prob_thres = QString::fromStdString(cur_prob_thres_str).toDouble();
-                    if (cur_prob < cur_prob_thres)
-                        continue;
-                    exist_class[bbox.class_number-1] = true;
-                    det_box_cnt[bbox.class_number-1] += 1;
-                    det_box_prob[bbox.class_number-1] += cur_prob;
-
-                    int r, g, b;
-                    COLOR_VECTOR[bbox.class_number-1].getRgb(&r, &g, &b);
-                    cv::Scalar class_color_scalar = cv::Scalar(b, g, r);
-                    cv::rectangle(PRED_IMG,
-                                  cv::Point(bbox.box_center_X - bbox.box_width/2, bbox.box_center_Y - bbox.box_height/2),
-                                  cv::Point(bbox.box_center_X + bbox.box_width/2 + (bbox.box_width % 2), bbox.box_center_Y + bbox.box_height / 2 + (bbox.box_height % 2)),
-                                  class_color_scalar,
-                                  2
-                                  );
-                    string classname = ui->tableWidget_class->item(bbox.class_number-1, NAME_COL)->text().toStdString();
-                    std::ostringstream out;
-                    out.precision(2);
-                    out << std::fixed << cur_prob;
-                    string classprob = string("(") + out.str() + string("%)");
-                    classname += classprob;
-                    const char* class_string = classname.c_str();
-                    if (class_string) {
-                        cv::putText(PRED_IMG, class_string, cv::Point(bbox.box_center_X - bbox.box_width / 2, bbox.box_center_Y - bbox.box_height / 2), FONT_HERSHEY_SIMPLEX, 1, white, 7);
-                        cv::putText(PRED_IMG, class_string, cv::Point(bbox.box_center_X - bbox.box_width / 2, bbox.box_center_Y - bbox.box_height / 2), FONT_HERSHEY_SIMPLEX, 1, class_color_scalar, 4);
-                    }
-                }
-                // Class Name in edit_show_class
-                QString exist_class_string("");
-                int exist_class_cnt = 0;
-                for (int i = 0; i < ui->tableWidget_class->rowCount(); i++) {
-                    if (exist_class[i]) {
-                        exist_class_cnt++;
-                        QString classname = ui->tableWidget_class->item(i, NAME_COL)->text();
-                        if (exist_class_string != QString("")) {
-                            if (exist_class_cnt == 5)
-                                exist_class_string += ",\n";
-                            else
-                                exist_class_string += ", ";
-                        }
-                        exist_class_string += classname;
-                    }
-                }
-                if (exist_class_string == QString(""))
-                    exist_class_string = QString("None");
-                ui->edit_show_class->setText((QString(" ") + exist_class_string));
-
-                for (int cla_idx = 0; cla_idx < det_box_cnt.size(); cla_idx++) {
-                    new_row.push_back(to_string(det_box_cnt[cla_idx]));
-                }
-                for (int cla_idx = 0; cla_idx < det_box_prob.size(); cla_idx++) {
-                    float prob_sum = det_box_prob[cla_idx];
-                    if (prob_sum == 0) {
-                        new_row.push_back(std::string("0 %"));
-                        continue;
-                    }
-                    float cur_cla_prob = prob_sum / (float)det_box_cnt[cla_idx];
-                    std::ostringstream out;
-                    out.precision(2);
-                    out << std::fixed << cur_cla_prob;
-                    new_row.push_back((out.str() + std::string(" %")));
-                }
-            }
+            detSetResults(outputs, PRED_IMG, new_row);
         }
         else if (model_type == "OCR") {
-            if (PRED_IDX != -1) {
-                nrt::Shape input_image_shape = get_model_input_shape(0);
-                int input_h = PRED_IMG.rows;
-                int input_w = PRED_IMG.cols;
-                double h_ratio = (double)input_image_shape.dims[0] / input_h;
-                double w_ratio = (double)input_image_shape.dims[1] / input_w;
-
-                nrt::NDBuffer output_boxes = outputs.get_at(PRED_IDX);
-                nrt::NDBuffer output_prob = outputs.get_at(PROB_IDX);
-                nrt::Shape output_pred_shape = output_boxes.get_shape();
-                const int number_of_boxes = output_pred_shape.dims[1];
-                const int* bcyxhw_ptr = output_boxes.get_data_ptr<int>();
-                const float* prob_ptr = output_prob.get_data_ptr<float>();
-
-                vector<BoundingBox> exist_bbox;
-                for (int box_idx = 0; box_idx < number_of_boxes; ++box_idx) {
-                    BoundingBox bbox = convert_to_bounding_box(bcyxhw_ptr + box_idx * 6, h_ratio, w_ratio);
-                    exist_bbox.push_back(bbox);
-                    const float* probs = prob_ptr + box_idx * (get_model_class_num() + 1);
-                    cv::rectangle(PRED_IMG,
-                                  cv::Point(bbox.box_center_X - bbox.box_width / 2, bbox.box_center_Y - bbox.box_height / 2),
-                                  cv::Point(bbox.box_center_X + bbox.box_width / 2 + (bbox.box_width & 1), bbox.box_center_Y + bbox.box_height / 2 + (bbox.box_height & 1)),
-                                  red,
-                                  2
-                                  );
-                    const char* classname = get_model_class_name(bbox.class_number).toStdString().c_str();
-                    if (classname) {
-                        cv::Size org_size = cv::getTextSize(std::string(classname), cv::FONT_HERSHEY_SIMPLEX, 1.0, 4, 0);
-                        double font_scale = (double)bbox.box_height / (double)org_size.height;
-                        int scale_gap = (int)((font_scale - 1) * 50);
-                        // cv::putText(PRED_IMG, classname, cv::Point(bbox.box_center_X - bbox.box_width / 2, bbox.box_center_Y - bbox.box_height / 2), 0, 1, cv::Scalar(0, 0, 255), 3);
-                        cv::putText(PRED_IMG, classname, cv::Point(bbox.box_center_X - (bbox.box_width / 2), bbox.box_center_Y + bbox.box_height + scale_gap), FONT_HERSHEY_SIMPLEX, font_scale, white, 7, 8, false);
-                        cv::putText(PRED_IMG, classname, cv::Point(bbox.box_center_X - (bbox.box_width / 2), bbox.box_center_Y + bbox.box_height + scale_gap), FONT_HERSHEY_SIMPLEX, font_scale, red, 4, 8, false);
-                    }
-                }
-                sort(exist_bbox.begin(), exist_bbox.end(), bbox_cmp);
-                // Set Color in Class List
-                // ui->tableWidget_class->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-                for (int r = 0; r < ui->tableWidget_class->rowCount(); r++) {
-                    int colCount = ui->tableWidget_class->columnCount();
-                    if ((r == 3) || (r == 6))
-                        colCount = 6;
-                    for (int c = 0; c < colCount; c++) {
-                        ui->tableWidget_class->item(r, c)->setBackgroundColor(QColor(255, 255, 255));
-                        ui->tableWidget_class->item(r, c)->setTextColor(QColor(0, 0, 0));
-                    }
-                }
-                for (int i = 0; i < exist_bbox.size(); i++) {
-                    const char* classname = get_model_class_name(exist_bbox[i].class_number).toStdString().c_str();
-                    if (classname) {
-                        const char classchar = classname[0];
-                        int row = 0, col = 0;
-                        if ((classchar >= '0') && (classchar <= '9')) {
-                            row = 0;
-                            col = classchar - '0';
-                        }
-                        else if ((classchar >= 'A') && (classchar <= 'Z')) {
-                            int order = classchar - 'A';
-                            row = 1 + (int)(order / 10);
-                            col = order % 10;
-                        }
-                        else if ((classchar >= 'a') && (classchar <= 'z')) {
-                            int order = classchar - 'a';
-                            row = 4 + (int)(order / 10);
-                            col = order % 10;
-                        }
-                        else {
-                        }
-                        ui->tableWidget_class->item(row, col)->setBackgroundColor(QColor(255, 0, 0));
-                        ui->tableWidget_class->item(row, col)->setTextColor(QColor(255, 255, 255));
-                    }
-                }
-                // OCR String in edit_show_class
-                QString ocr_string("");
-                for (int i = 0; i < exist_bbox.size(); i++) {
-                    QString classname = get_model_class_name(exist_bbox[i].class_number);
-                    ocr_string += classname;
-                }
-                ui->edit_show_class->setText(ocr_string);
-                new_row.push_back(ocr_string.toStdString());
-            }
+            ocrSetResults(outputs, PRED_IMG, new_row);
         }
         else if (model_type == "Anomaly") {
-
-        }
-        else {
-
+            anomSetResults(outputs, PRED_IMG, new_row);
         }
     }
 
     cv::cvtColor(ORG_IMG, ORG_IMG, COLOR_RGB2BGR);
     cv::cvtColor(PRED_IMG, PRED_IMG, COLOR_RGB2BGR);
-    // CAM Save Task - Use Thread
-    /*
-    segObj = { {"className", },
-               {"type", },
-               {"points", }};
-    dataObj = { {"fileName", },
-                {"set", },
-                {"classLabel", },
-                {"regionLabel", }};
-    */
+
     Mat_With_Name org_mwn, pred_mwn;
     org_mwn.image = ORG_IMG.clone();
     pred_mwn.image = PRED_IMG.clone();
@@ -1564,11 +1713,12 @@ void MainWindow::showResult()
         }
     }
     else {
-    if (!show_pred_flag)
-        m_qimage = QImage((const unsigned char*) (ORG_IMG.data), ORG_IMG.cols, ORG_IMG.rows, ORG_IMG.step, QImage::Format_RGB888);
-    else
-        m_qimage = QImage((const unsigned char*) (PRED_IMG.data), PRED_IMG.cols, PRED_IMG.rows, PRED_IMG.step, QImage::Format_RGB888);
+        if (!show_pred_flag)
+            m_qimage = QImage((const unsigned char*) (ORG_IMG.data), ORG_IMG.cols, ORG_IMG.rows, ORG_IMG.step, QImage::Format_RGB888);
+        else
+            m_qimage = QImage((const unsigned char*) (PRED_IMG.data), PRED_IMG.cols, PRED_IMG.rows, PRED_IMG.step, QImage::Format_RGB888);
     }
+
     QPixmap m_qpixmap = QPixmap::fromImage(m_qimage);
     ui->lab_show_res->setPixmap(m_qpixmap.scaled(ui->lab_show_res->width(), ui->lab_show_res->height(), Qt::KeepAspectRatio));
 }

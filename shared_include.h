@@ -68,6 +68,7 @@ using namespace cv;
 #include <sys/types.h>
 #include <random>
 #include <sstream>
+#include <regex>
 using namespace std;
 
 #endif // QT_UTIL_H

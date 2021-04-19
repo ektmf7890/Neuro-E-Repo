@@ -234,10 +234,16 @@ float get_model_scale_factor() {
     return m_model_ptr->get_scale_factor();
 }
 
+int get_model_output_num() {
+    if(get_model_status() != nrt::STATUS_SUCCESS)
+        return -1;
+    return m_model_ptr->get_num_outputs();
+}
+
 bool is_model_patch_mode() {
     if (get_model_status() != nrt::STATUS_SUCCESS)
-        return flase;
-    return m_model_ptr->is_patch_mode();
+        return false;
+    return m_model_ptr->is_patch_mode(0);
 }
 
 int get_executor_status(){

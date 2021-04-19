@@ -51,10 +51,11 @@ nrt::Shape get_model_input_shape(int idx);
 nrt::DType get_model_input_dtype(int idx);
 nrt::InterpolationType get_model_interpolty(int idx);
 float get_model_scale_factor();
+int get_model_output_num();
 bool is_model_patch_mode();
 
 int get_executor_status();
 
-nrt::NDBuffer execute(nrt::NDBuffer resized_img_buffer);
+nrt::NDBufferList execute(nrt::NDBuffer resized_img_buffer);
 
 #endif // NRTEXE_H
