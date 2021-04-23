@@ -54,7 +54,8 @@ LIBS += -L/usr/lib \
         -lopencv_videoio \
         -lopencv_imgcodecs \
         -lopencv_imgproc \
-        -lopencv_core
+        -lopencv_core \
+        -lsqlite3
 #        -lopencv_dnn \
 #        -lopencv_ml \
 #        -lopencv_objdetect \

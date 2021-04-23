@@ -941,7 +941,6 @@ void MainWindow::tableItemChanged(int row, int col) {
 }
 
 /* Loop for Save Images */
-// thread save_thread{&MainWindow::save_worker, &main_window};
 void MainWindow::save_worker() {
     while (1) {
         std::unique_lock<std::mutex> lock(m_save_info._mutex);
@@ -1068,7 +1067,7 @@ void MainWindow::claSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vec
     if (CAM_IDX != -1) {
         nrt::NDBuffer cam_colormap;
         output_cam = outputs.get_at(CAM_IDX);
-        nrt::Status status = nrt::convert_to_colormap(output_cam, cam_colormap);
+        status = nrt::convert_to_colormap(output_cam, cam_colormap);
         if (status != nrt::STATUS_SUCCESS) {
             qDebug() << "convert_to_colormap failed. :" << QString(nrt::get_last_error_msg());
         }
@@ -1096,60 +1095,34 @@ void MainWindow::claSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vec
             for (int j=0; j < output_prob_shape.dims[1]; j++) {
                 float prob = *output_prob.get_at_ptr<float>(i, j);
                 cls_prob_vec[j] = prob;
-                qDebug() << get_model_class_name(i) << " - " << prob;
+                qDebug() << get_model_class_name(j) << " - " << prob;
             }
         }
     }
 
     std::string pred_cls = "";
-
-    nrt::NDBuffer prob_thres = get_model_prob_threshold();
     if(PRED_IDX != -1) {
         output_pred = outputs.get_at(PRED_IDX);
+        nrt::Shape output_pred_shape = output_pred.get_shape();
 
-        // Implement getting threshold value from ui dynamically
-        // Add a threshold column in csv
-
-        /*
         int pred_cla_idx;
-        for (int img_idx = 0; img_idx < output_pred_shape.dims[0]; img_idx++) {
-            pred_cla_idx = *output_pred.get_at_ptr<int>(img_idx);
+        for (int i = 0; i < output_pred_shape.dims[0]; i++) {
+            pred_cla_idx = *output_pred.get_at_ptr<int>(i);
             qDebug() << "Prediction class index(Not thresholded): " << QString::number(pred_cla_idx);
         }
-        pred_cla_name = get_model_class_name(pred_cla_idx);
+        QString pred_cla_name = get_model_class_name(pred_cla_idx);
 
         int num_idx = ui->tableWidget_class->item(pred_cla_idx, NAME_COL+1)->text().size() - 1;
         float cur_prob_thres = ui->tableWidget_class->item(pred_cla_idx, NAME_COL+1)->text().left(num_idx).toFloat();
         qDebug() << ui->tableWidget_class->item(pred_cla_idx, NAME_COL+1)->text().left(num_idx) << cur_prob_thres;
 
-        if ((cla_prob_vec[pred_cla_idx] * 100) < cur_prob_thres)
-            pred_cla_name.toStdString() = String("Unknown");
+        if ((cls_prob_vec[pred_cla_idx] * 100) < cur_prob_thres)
+            pred_cla_name = QString("Unknown");
 
-        ui->edit_show_class->setText(QString(pred_cla_name));
-        result_cla = pred_cla_name.toStdString();
-        */
-        if (prob_thres.empty()){
-            float prob_thres_val = 0.8;
-            status = nrt::prob_map_threshold(output_prob, prob_thres_val, thresholded_pred);
-        }
-        else{
-            status = nrt::prob_map_threshold(output_prob, prob_thres, thresholded_pred);
-        }
+        ui->edit_show_class->setText(pred_cla_name);
 
-        if(status != nrt::STATUS_SUCCESS){
-            qDebug() << "prob map threshold fail";
-            return;
-        }
-
-        nrt::Shape thresholded_pred_shape = thresholded_pred.get_shape();
-
-        for(int i=0; i<thresholded_pred_shape.dims[0]; i++){
-            int cls_idx = *thresholded_pred.get_at_ptr<int>(i);
-            pred_cls = (cls_idx < 0 ? get_model_class_name(cls_idx).toStdString() : "Unknown");
-        }
+        pred_cls = pred_cla_name.toStdString();
     }
-
-    ui->edit_show_class->setText(QString(pred_cls.c_str()));
 
     // csv new row
     new_row.push_back(pred_cls);
@@ -1613,17 +1586,13 @@ void MainWindow::showResult() {
     if(get_model_status() == nrt::STATUS_SUCCESS && get_executor_status() == nrt::STATUS_SUCCESS){
         if(model_type == "Segmentation"){
             nrt::NDBuffer img_buffer = get_img_buffer(ORG_IMG);
-
-            auto start = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double, std::milli> inf_time;
 //            vector<nrt::NDBuffer> output_vector = seg_execute(img_buffer);
-            merged_pred_output = seg_execute(img_buffer);
-            auto end = std::chrono::high_resolution_clock::now();
+            merged_pred_output = seg_execute(img_buffer, inf_time);
             /*
             merged_pred_output = output_vector[0];
             merged_prob_output = output_vector[1];
             */
-
-            std::chrono::duration<double, std::milli> inf_time = end - start;
             ui->edit_show_inf->setText(QString::number(inf_time.count(), 'f', 3));
         }
         else if(model_type == "Classification" || model_type == "Detection" || model_type == "OCR" || model_type == "Anomaly") {
@@ -2013,6 +1982,7 @@ void MainWindow::on_btn_select_model_clicked()
             return;
     }
 
+
     QString modelPath = QFileDialog::getOpenFileName(this, tr("Select Model"), QDir::homePath(), tr("default (*.net)"));
 
     if (modelPath == "")
@@ -2257,6 +2227,10 @@ void MainWindow::on_btn_img_play_clicked()
             std::unique_lock<std::mutex> lock(m_save_info._mutex);
             m_save_info.save_path = img_save_path;
         }
+
+        // DB save or not
+
+
 
         ui->btn_cam_mode->setEnabled(false);
 

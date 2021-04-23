@@ -48,7 +48,7 @@ nrt::NDBuffer get_img_buffer(cv::Mat ORG_IMG) {
     return resized_img_buffer;
 }
 
-nrt::NDBuffer seg_execute (nrt::NDBuffer image_buff){
+nrt::NDBuffer seg_execute (nrt::NDBuffer image_buff, std::chrono::duration<double, std::milli> &inf_time){
     nrt::NDBuffer resized_image_buff;
     nrt::NDBuffer image_patch_buff;
     nrt::NDBuffer patch_info;
@@ -94,7 +94,11 @@ nrt::NDBuffer seg_execute (nrt::NDBuffer image_buff){
         qDebug() << "]";
 
         qDebug() << "Execute";
+        auto start = std::chrono::high_resolution_clock::now();
         outputs = execute(image_patch_buff);
+        auto end = std::chrono::high_resolution_clock::now();
+        inf_time = end - start;
+
         if(outputs.get_count() == 0) {
             qDebug() << "Execute failed" << QString(nrt::get_last_error_msg());
             return nrt::NDBuffer();
@@ -164,7 +168,11 @@ nrt::NDBuffer seg_execute (nrt::NDBuffer image_buff){
         }
 
         qDebug() << "Execute";
+        auto start = std::chrono::high_resolution_clock::now();
         outputs = execute(resized_image_buff);
+        auto end = std::chrono::high_resolution_clock::now();
+        inf_time = start - end;
+
         if(outputs.get_count() == 0) {
             qDebug() << "Execute failed" << QString(nrt::get_last_error_msg());
         }

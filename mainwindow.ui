@@ -729,7 +729,7 @@
                 <item>
                  <widget class="QStackedWidget" name="Mode_Setting_Stack">
                   <property name="currentIndex">
-                   <number>0</number>
+                   <number>1</number>
                   </property>
                   <widget class="QWidget" name="Cam_Page">
                    <layout class="QVBoxLayout" name="verticalLayout_8">

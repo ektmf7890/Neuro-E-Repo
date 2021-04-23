@@ -71,4 +71,6 @@ using namespace cv;
 #include <regex>
 using namespace std;
 
+#include <sqlite3.h>
+
 #endif // QT_UTIL_H
