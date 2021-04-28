@@ -1,4 +1,4 @@
-#include "mainwindow.h"
+﻿#include "mainwindow.h"
 #include "ui_mainwindow.h"
 
 #define TERM_MIN 0.0
@@ -15,6 +15,17 @@ const string PathSeparator = QString(QDir::separator()).toStdString();
 const string IMG_FORMAT = ".png";
 const string ORG_FOL = "org" + PathSeparator;
 const string PRED_FOL = "pred" + PathSeparator;
+
+// Database file
+static const char* nrtDBName = "neuroe.db";
+
+// Paths of images and csv files.
+namespace fs = std::experimental::filesystem;
+static const fs::path current_path = fs::current_path();
+static const fs::path imagesPath = current_path/"images";
+static const fs::path modelsPath = current_path/"models";
+static const fs::path resultImagesPath = current_path/"resultImages";
+static const fs::path resultCSVPath = current_path/"resultCSV";
 
 QVector<QColor> COLOR_VECTOR;
 
@@ -172,6 +183,9 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->cbx_select_fp16->setWhatsThis("Slower when creating Executor, but Faster when predicting Img");
     ui->lab_model_status->setAlignment(Qt::AlignCenter);
     setModelInfo(false);
+
+    // DB Setup
+    sqliteDBSetup();
 }
 
 MainWindow::~MainWindow()
@@ -194,6 +208,41 @@ void MainWindow::center_and_resize()
             QGuiApplication::screens().at(0)->geometry()
         )
     );
+}
+
+void MainWindow::sqliteDBSetup() {
+    if(m_nrtDB.use_count() > 0){
+        m_nrtDB.reset();
+    }
+    m_nrtDB = std::make_shared<neuroeDB>();
+
+    m_nrtDB->Open(nrtDBName);
+
+    m_nrtDB->CreateUserGroupTable();
+    m_nrtDB->CreateImageSetTable();
+    m_nrtDB->CreateModelTable();
+    m_nrtDB->CreateImagesTable();
+    m_nrtDB->CreateEvaluationSetTable();
+    m_nrtDB->CreateResultImagesTable();
+
+    if(!fs::exists(imagesPath)){
+        cout << "Creating new image path: " << imagesPath << endl;
+        fs::create_directory(imagesPath);
+    }
+    if(!fs::exists(resultImagesPath)){
+        cout << "Creating new image path: " << resultImagesPath << endl;
+        fs::create_directory(resultImagesPath);
+    }
+    if(!fs::exists(resultCSVPath)){
+        cout << "Creating new image path: " << resultCSVPath << endl;
+        fs::create_directory(resultCSVPath);
+    }
+    if(!fs::exists(modelsPath)){
+        cout << "Creating new image path: " << modelsPath << endl;
+        fs::create_directory(modelsPath);
+    }
+
+    m_nrtDB->Close();
 }
 
 void MainWindow::paintEvent(QPaintEvent *paintEvent)
@@ -1981,6 +2030,7 @@ void MainWindow::on_btn_select_model_clicked()
         if (!get_gpu_status())
             return;
     }
+
 
 
     QString modelPath = QFileDialog::getOpenFileName(this, tr("Select Model"), QDir::homePath(), tr("default (*.net)"));
