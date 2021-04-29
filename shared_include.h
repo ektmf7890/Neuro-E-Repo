@@ -2,6 +2,7 @@
 #define QT_UTIL_H
 
 #include <QMainWindow>
+#include <QWidget>
 #include <QScreen>
 #include <QList>
 #include <QMessageBox>

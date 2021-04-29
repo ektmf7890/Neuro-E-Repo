@@ -2031,8 +2031,6 @@ void MainWindow::on_btn_select_model_clicked()
             return;
     }
 
-
-
     QString modelPath = QFileDialog::getOpenFileName(this, tr("Select Model"), QDir::homePath(), tr("default (*.net)"));
 
     if (modelPath == "")
