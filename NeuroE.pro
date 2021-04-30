@@ -29,7 +29,8 @@ SOURCES += \
     nrtexe.cpp \
     predict.cpp \
     sqlite3.c \
-    database.cpp
+    database.cpp \
+    model_select.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -39,7 +40,8 @@ HEADERS += \
     shared_include.h \
     predict.h \
     sqlite3.h \
-    database.h
+    database.h \
+    model_select.h
 
 RESOURCES += \
     qtresource.qrc \

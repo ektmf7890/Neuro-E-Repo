@@ -1,13 +1,5 @@
 ﻿#include "database.h"
 
-neuroeDB::neuroeDB(){}
-
-neuroeDB::~neuroeDB(){}
-
-sqlite3* neuroeDB::getDB() {
-    return this->db;
-}
-
 char buffer[80];
 
 char* getTime() {
@@ -285,7 +277,7 @@ bool neuroeDB::InsertImageSet(const char* name, int userGroupId){
     return result;
 }
 
-bool neuroeDB::InsertModel(const char* name, const char* type, const char* platform, const char* interpoly, int numOfClasses, const char* modelPath){
+bool neuroeDB::InsertModel(const char* name, int type, const char* platform, int searchSpace, int numOfClasses, const char* modelPath){
     const char* createdOn = getTime();
     sqlite3_stmt * stmt;
     bool result = true;
@@ -293,9 +285,9 @@ bool neuroeDB::InsertModel(const char* name, const char* type, const char* platf
     sqlite3_prepare_v2(this->db, QUERY_MODEL_INSERT, -1, &stmt, NULL);
     sqlite3_bind_text(stmt, 1, name, -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 2, createdOn, -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 3, type, -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 3, type);
     sqlite3_bind_text(stmt, 4, platform, -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 5, interpoly, -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 5, searchSpace);
     sqlite3_bind_int(stmt, 6, numOfClasses);
     sqlite3_bind_text(stmt, 7, modelPath, -1, SQLITE_STATIC);
 
@@ -353,9 +345,6 @@ bool neuroeDB::InsertImage(int imageSetId, const char* name, const char* imagePa
     if(rc != SQLITE_DONE){
         printf("Result code: %d\n", rc);
         fwprintf(stderr, L"line %d: %s\n", __LINE__, sqlite3_errmsg16(this->db));
-    }
-    if(rc == SQLITE_DONE){
-        cout << "Insert done for " << name << endl;
     }
     this->Commit();
 

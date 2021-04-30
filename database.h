@@ -1,10 +1,6 @@
-﻿#ifndef DATABASE_H
-#define DATABASE_H
-
+﻿#pragma once
 #include <iostream>
 #include "sqlite3.h"
-#include <ctime>
-
 using namespace std;
 
 const static char* QUERY_USER_GROUPS_TABLE_CREATE = "CREATE TABLE IF NOT EXISTS UserGroups (Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, Name TEXT NOT NULL, CreatedOn TEXT NOT NULL)";
@@ -13,7 +9,6 @@ const static char* QUERY_IMAGE_SETS_TABLE_CREATE = "CREATE TABLE IF NOT EXISTS I
                 "Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "\
                 "Name TEXT NOT NULL, "\
                 "CreatedOn TEXT NOT NULL, "\
-                "NumOfImages INTEGER DEFAULT 0, "\
                 "UserGroupId INTEGER NOT NULL,"\
                 "FOREIGN KEY(UserGroupId) REFERENCES UserGroups(Id) ON DELETE CASCADE );";
 
@@ -29,9 +24,9 @@ const static char* QUERY_MODELS_TABLE_CREATE = "CREATE TABLE IF NOT EXISTS Model
                 "Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "\
                 "Name TEXT NOT NULL, "\
                 "CreatedOn TEXT NOT NULL, "\
-                "Type TEXT NOT NULL, "\
+                "Type INTERGER NOT NULL, "\
                 "Platform TEXT NOT NULL, "\
-                "Interpolation Type TEXT NOT NULL, "\
+                "SearchSpace INTEGER NOT NULL, "\
                 "NumClasses INTEGER NOT NULL, "\
                 "ModelPath TEXT NOT NULL )";
 
@@ -71,7 +66,7 @@ const static char* QUERY_USER_GROUP_INSERT = "INSERT OR REPLACE INTO UserGroups(
 
 const static char* QUERY_IMAGE_SET_INSERT = "INSERT OR REPLACE INTO ImageSets(Name, CreatedOn, UserGroupId) VALUES(?, ?, ?)";
 
-const static char* QUERY_MODEL_INSERT = "INSERT OR REPLACE INTO Models VALUES(?, ?, ?, ?, ?, ?, ?)";
+const static char* QUERY_MODEL_INSERT = "INSERT OR REPLACE INTO Models(Name, CreatedOn, Type, Platform, SearchSpace, NumClasses, ModelPath) VALUES(?, ?, ?, ?, ?, ?, ?)";
 
 const static char* QUERY_EVALUATION_SET_INSERT = "INSERT OR REPLACE INTO EvaluationSets VALUES(?, ?, ?)";
 
@@ -82,13 +77,10 @@ const static char* QUERY_RESULT_IMAGE_INSERT = "INSERT OR REPLACE INTO ResultIma
 class neuroeDB
 {
 private:
-    sqlite3* db;
+    //sqlite3* db;
 
 public:
-    neuroeDB();
-    ~neuroeDB();
-
-    sqlite3* getDB();
+    sqlite3* db;
 
     bool Open(const char* dbFileName);
     bool Close();
@@ -108,10 +100,10 @@ public:
 
     bool InsertUserGroup(const char* name);
     bool InsertImageSet(const char* name, int userGroupId);
-    bool InsertModel(const char* name, const char* type, const char* platform, const char* interpoly, int numOfClasses, const char* modelPath);
     bool InsertEvaluationSet(int imageSetId, int modelId, const char* resultCSVPath);
     bool InsertImage(int imageSetId, const char* name, const char* imagePath);
     bool InsertResultImage(int evaluationSetId, int imageId, const char* resultImagePath, double inferTime);
+    bool InsertModel(const char* name, int type, const char* platform, int searchSpace, int numOfClasses, const char* modelPath);
 
     bool DeleteUserGroup();
     bool DeleteImageSet();
@@ -120,6 +112,4 @@ public:
     bool DeleteImage();
     bool DeleteResultImage();
 };
-
-#endif
 
