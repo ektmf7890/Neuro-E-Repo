@@ -19,14 +19,6 @@ const string PRED_FOL = "pred" + PathSeparator;
 // Database file
 static const char* nrtDBName = "neuroe.db";
 
-// Paths of images and csv files.
-namespace fs = std::experimental::filesystem;
-static const fs::path current_path = fs::current_path();
-static const fs::path imagesPath = current_path/"images";
-static const fs::path modelsPath = current_path/"models";
-static const fs::path resultImagesPath = current_path/"resultImages";
-static const fs::path resultCSVPath = current_path/"resultCSV";
-
 QVector<QColor> COLOR_VECTOR;
 
 extern int PROB_IDX, PRED_IDX, CAM_IDX, ANO_IDX;
