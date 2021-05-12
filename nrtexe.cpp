@@ -1,3 +1,7 @@
+﻿/*
+Using Neuro-R version 2.2.3
+*/
+
 #include <nrtexe.h>
 
 using namespace std;
@@ -39,7 +43,7 @@ bool get_gpu_status() {
 }
 
 bool set_gpu(int gpuIdx) {
-    m_device = nrt::Device::get_device(gpuIdx);
+    m_device = nrt::Device::get_gpu_device(gpuIdx);
     if (m_device.devtype == nrt::DevType::DEVICE_CUDA_GPU)
         qDebug() << "NRT) Set GPU" << gpuIdx << ":" << get_gpu_name();
     return (m_device.devtype == nrt::DevType::DEVICE_CUDA_GPU) ? true : false;
@@ -55,13 +59,15 @@ QString set_model(QString modelPath, bool fp16_flag) {
     modelPath.toWCharArray(mModelPath);
     mModelPath[modelPath.length()] = L'\0';
 
+    const wchar_t* m_modelPath = modelPath.toStdWString().c_str();
+
     // Load Model File
     if (m_model_ptr.use_count() > 0)
         m_model_ptr.reset();
     m_model_ptr = make_shared<nrt::Model>(mModelPath);
 
     if (m_model_ptr->get_status() != nrt::STATUS_SUCCESS) {
-        qDebug() << "Model initialization failed.  : " << QString(nrt::get_last_error_msg()) << endl;
+        qDebug() << "Model first initialization failed.  : " << QString(nrt::get_last_error_msg()) << endl;
         return QString("");
     }
 
@@ -84,11 +90,11 @@ QString set_model(QString modelPath, bool fp16_flag) {
         return QString("");
     }
     if (m_model_ptr->get_status() != nrt::STATUS_SUCCESS) {
-        qDebug() << "Model initialization failed.  : " << QString(nrt::get_last_error_msg()) << endl;
+        qDebug() << "Model second initialization failed.  : " << QString(nrt::get_last_error_msg()) << endl;
         return QString("");
     }
 
-    PROB_IDX = -1; PRED_IDX = -1; CAM_IDX = -1; ANO_IDX = -1, ROT_IDX;
+    PROB_IDX = -1; PRED_IDX = -1; CAM_IDX = -1; ANO_IDX = -1, ROT_IDX = -1;
     int num_outputs = m_model_ptr->get_num_outputs();
     qDebug() << "NRT) Output Flags";
     for (int i = 0; i < num_outputs; i++) {

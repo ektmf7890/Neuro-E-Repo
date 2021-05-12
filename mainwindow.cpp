@@ -1,4 +1,4 @@
-#include "mainwindow.h"
+﻿#include "mainwindow.h"
 #include "ui_mainwindow.h"
 
 #define TERM_MIN 0.0
@@ -104,13 +104,13 @@ MainWindow::MainWindow(QWidget *parent) :
     // Show Style
     ui->btn_show_prediction->setIcon(QIcon(":/icons/show.png"));
     ui->btn_show_prediction->setToolTip("Show Prediction");
-//    ui->btn_show_prediction->setIconSize(QSize(ui->btn_show_prediction->width()*0.5, ui->btn_show_prediction->height()*0.5));
+    ui->btn_show_prediction->setIconSize(QSize(ui->btn_show_prediction->width()*0.5, ui->btn_show_prediction->height()*0.5));
     ui->btn_show_img_result->setIcon(QIcon(":/icons/table.png"));
     ui->btn_show_img_result->setToolTip("Show Result Table");
-//    ui->btn_show_img_result->setIconSize(QSize(ui->btn_show_img_result->width()*0.5, ui->btn_show_img_result->height()*0.5));
+    ui->btn_show_img_result->setIconSize(QSize(ui->btn_show_img_result->width()*0.5, ui->btn_show_img_result->height()*0.5));
     ui->btn_save_img_result->setIcon(QIcon(":/icons/save.png"));
     ui->btn_save_img_result->setToolTip("Save Result Table");
-//    ui->btn_save_img_result->setIconSize(QSize(ui->btn_save_img_result->width()*0.5, ui->btn_save_img_result->height()*0.5));
+    ui->btn_save_img_result->setIconSize(QSize(ui->btn_save_img_result->width()*0.5, ui->btn_save_img_result->height()*0.5));
     ui->lab_result_info->setText("There is no table to show.");
     ui->gridLayout->removeWidget(ui->Show_Res_Table);
     ui->gridLayout->addWidget(ui->Show_Res_Table, 0, 0, Qt::AlignRight);
@@ -136,13 +136,10 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->com_cam_select->addItems(camType);
 
     // CAM Save Style
-    ui->edit_cam_save->setReadOnly(true);
     ui->rad_cam_rtmode->setChecked(true);
     ui->edit_cam_save_term->setValidator(new QDoubleValidator(TERM_MIN, TERM_MAX, 1, this));
-    ui->Cam_Save->hide();
     ui->edit_cam_save_term->setEnabled(false);
     ui->lab_cam_save_term->setEnabled(false);
-    ui->chb_show_prediction->setChecked(true);
 
     // IMG Mode Style
     setImgShowTimeEditEnable(false);
@@ -155,7 +152,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->edit_img_name->setReadOnly(true);
     ui->edit_set_show_time->setValidator(new QDoubleValidator(TERM_MIN, TERM_MAX, 1, this));
 
-    ui->spb_img_cur_idx->setReadOnly(true);
+//    ui->spb_img_cur_idx->setReadOnly(true);
     ui->btn_img_play->setIcon(QIcon(":/icons/cam_play.png"));
     ui->btn_img_play->setIconSize(QSize(ui->btn_img_play->height()*0.45, ui->btn_img_play->height()*0.45));
     ui->btn_img_pause->setIcon(QIcon(":/icons/cam_pause.png"));
@@ -171,7 +168,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->cbx_select_fp16->setToolTip("Slower when creating Executor, but Faster when predicting Img");
     ui->cbx_select_fp16->setWhatsThis("Slower when creating Executor, but Faster when predicting Img");
     ui->lab_model_status->setAlignment(Qt::AlignCenter);
-    setModelInfo(false);
+    setModelInfo(false, "");
 }
 
 MainWindow::~MainWindow()
@@ -356,25 +353,25 @@ void MainWindow::on_btn_show_img_result_clicked()
 {
     if (show_result_table) {    // Show -> Unshow
         show_result_table = false;
-        //ui->btn_show_img_result->setIcon(QIcon(":/icons/table.png"));
+        ui->btn_show_img_result->setIcon(QIcon(":/icons/table.png"));
         ui->btn_show_img_result->setDefault(false);
         ui->btn_show_img_result->setToolTip("Show Result Table");
 
         ui->Show_Res_Table->hide();
 
-        //ui->lab_show_res->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
-        //ui->lab_show_res->setSizeIncrement(ui->Show->width(), ui->Show->height());
+        ui->lab_show_res->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+        ui->lab_show_res->setSizeIncrement(ui->Show->width(), ui->Show->height());
     }
     else {                      // Unshow -> Show
         show_result_table = true;
-        //ui->btn_show_img_result->setIcon(QIcon(":/icons/untable.png"));
+        ui->btn_show_img_result->setIcon(QIcon(":/icons/untable.png"));
         ui->btn_show_img_result->setDefault(true);
         ui->btn_show_img_result->setToolTip("Unshow Result Table");
 
-        //ui->gridLayout->removeWidget(ui->Show_Res_Table);
+        ui->gridLayout->removeWidget(ui->Show_Res_Table);
         ui->Show_Res_Table->setMinimumWidth((int)(ui->Show->width()/2));
-        //ui->gridLayout->addWidget(ui->Show_Res_Table, 0, 0, Qt::AlignRight);
-        //ui->Show_Res_Table->setSizeIncrement((int)(ui->Show->width()/2), ui->Show->height());
+        ui->gridLayout->addWidget(ui->Show_Res_Table, 0, 0, Qt::AlignRight);
+        ui->Show_Res_Table->setSizeIncrement((int)(ui->Show->width()/2), ui->Show->height());
         ui->Show_Res_Table->show();
     }
 }
@@ -493,7 +490,7 @@ void MainWindow::on_btn_save_img_result_clicked() {
 
 /*** Model Info Setting Method ***/
 
-void MainWindow::setModelInfo(bool flag) {
+void MainWindow::setModelInfo(bool flag, QString model_name) {
     // Model Info를 지우고 Please Select Model 을 표시하고 싶을 때
     if (flag == false) {
         // 0: Model Info Page, 1: Model Status Page
@@ -512,7 +509,7 @@ void MainWindow::setModelInfo(bool flag) {
 
         ui->lab_device->setText(get_gpu_name());
         // Model Name Issue
-        // ui->lab_model_name->setText(get_model_name());
+        ui->lab_model_name->setText(model_name);
         ui->lab_model_type ->setText(get_model_type());
         ui->lab_model_trainingtype->setText(get_model_training_type());
         ui->lab_model_search->setText(get_model_search_level());
@@ -528,6 +525,8 @@ void MainWindow::setModelInfo(bool flag) {
         // Class Table
         setClassTable(flag);
     }
+
+    class_table_availbale = true;
 }
 
 void MainWindow::setClassTable(bool flag) {
@@ -894,6 +893,7 @@ void MainWindow::setClassTable(bool flag) {
     // Set Sensitivity (ANO) (Column = 2)
 
     // connect(sender, SIGNAL(destroyed(QObject*)), this, SLOT(objectDestroyed(QObject*)));
+    connect(ui->tableWidget_class, SIGNAL(cellClicked(int,int)), this, SLOT(tableItemClicked(int,int)));
     connect(ui->tableWidget_class, SIGNAL(cellDoubleClicked(int,int)), this, SLOT(tableItemClicked(int,int)));
     connect(ui->tableWidget_class, SIGNAL(cellChanged(int,int)), this, SLOT(tableItemChanged(int,int)));
 }
@@ -1400,26 +1400,28 @@ void MainWindow::detSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vec
 }
 
 void MainWindow::ocrSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vector<std::string> &new_row) {
-    if ((PRED_IDX != -1) && (PROB_IDX != -1)) {
+    if ((PRED_IDX != -1)) {
         nrt::Shape input_image_shape = get_model_input_shape(0);
         int input_h = PRED_IMG.rows;
         int input_w = PRED_IMG.cols;
         double h_ratio = (double)input_image_shape.dims[0] / input_h;
         double w_ratio = (double)input_image_shape.dims[1] / input_w;
 
-        nrt::NDBuffer output_boxes = outputs.get_at(PRED_IDX);
-        nrt::NDBuffer output_prob = outputs.get_at(PROB_IDX);
-        nrt::Shape output_pred_shape = output_boxes.get_shape();
+        nrt::NDBuffer output_boxes;
+        nrt::Shape output_pred_shape;
+
+        output_boxes = outputs.get_at(PRED_IDX);
+        output_pred_shape = output_boxes.get_shape();
 
         const int number_of_boxes = output_pred_shape.dims[0];
         const int* bcyxhw_ptr = output_boxes.get_data_ptr<int>();
-        const float* prob_ptr = output_prob.get_data_ptr<float>();
+
+        // Rotation apply needed!
 
         vector<BoundingBox> exist_bbox;
         for (int box_idx = 0; box_idx < number_of_boxes; ++box_idx) {
             BoundingBox bbox = convert_to_bounding_box(bcyxhw_ptr + box_idx * 6, h_ratio, w_ratio);
             exist_bbox.push_back(bbox);
-            const float* probs = prob_ptr + box_idx * (get_model_class_num() + 1);
 
             cv::rectangle(PRED_IMG,
                           cv::Point(bbox.box_center_X - bbox.box_width / 2, bbox.box_center_Y - bbox.box_height / 2),
@@ -1494,12 +1496,12 @@ void MainWindow::anomSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, ve
 
 void MainWindow::showResult() {
     cv::Mat ORG_IMG, PRED_IMG;
-    std::string cur_inf_img_path; // current inference image path
+    QString cur_inf_img_path; // current inference image path
     int pre_idx;
 
     // save csv table
     vector<std::string> new_row;
-    std::string cur_img_name;
+    QString cur_img_name;
 
     int cur_mode = ui->Mode_Setting_Stack->currentIndex();
 
@@ -1523,7 +1525,7 @@ void MainWindow::showResult() {
             QString time_format = "yyMMdd_HHmmss_zzz";
             QDateTime now = QDateTime::currentDateTime();
             std::string time_str = now.toString(time_format).toStdString();
-            cur_img_name = time_str + IMG_FORMAT;
+            cur_img_name = QString::fromStdString(time_str + IMG_FORMAT);
         }
     }
 
@@ -1542,12 +1544,11 @@ void MainWindow::showResult() {
         if (cur_inf_img_idx == 0 && macro_cam_flag)
             ui->spb_img_cur_idx->setRange(1, ui->spb_img_cur_idx->maximum());
 
-        cur_inf_img_path = inf_img_list[cur_inf_img_idx].toStdString();
-        pre_idx = ui->edit_img_input->text().size() + 1;
-        cur_img_name = cur_inf_img_path.substr(pre_idx);
+        cur_inf_img_path = inf_img_list[cur_inf_img_idx];
+        cur_img_name = cur_inf_img_path.split(QDir::separator()).last();
         qDebug() << "[" << cur_inf_img_idx << "] " << inf_img_list[cur_inf_img_idx];
 
-        ORG_IMG = cv::imread(cur_inf_img_path, cv::IMREAD_COLOR);
+        ORG_IMG = cv::imread(cur_inf_img_path.toStdString(), cv::IMREAD_COLOR);
         qDebug() << "Show Result) Imread";
 
         if (ORG_IMG.empty()) {
@@ -1572,7 +1573,7 @@ void MainWindow::showResult() {
         }
     }
 
-    new_row.push_back(cur_img_name);
+    new_row.push_back(cur_img_name.toStdString());
 
     qDebug() << "Inference Image";
     PRED_IMG = ORG_IMG.clone();
@@ -1583,7 +1584,7 @@ void MainWindow::showResult() {
 
     qDebug() << "Show Result) Execute";
     QString model_type = get_model_type();
-    if(get_model_status() == nrt::STATUS_SUCCESS && get_executor_status() == nrt::STATUS_SUCCESS){
+    if(get_model_status() == nrt::STATUS_SUCCESS && get_executor_status() == nrt::STATUS_SUCCESS && class_table_availbale){
         if(model_type == "Segmentation"){
             nrt::NDBuffer img_buffer = get_img_buffer(ORG_IMG);
             std::chrono::duration<double, std::milli> inf_time;
@@ -1660,9 +1661,9 @@ void MainWindow::showResult() {
 
 //        int pre_idx = ui->edit_img_input->text().size() + 1;
 //        std::string img_name = cur_inf_img_path.substr(pre_idx);
-        ui->edit_img_name->setText(QString::fromStdString(cur_img_name));
-        org_mwn.name = cur_img_name;
-        pred_mwn.name = cur_img_name;
+        ui->edit_img_name->setText(cur_img_name);
+        org_mwn.name = cur_img_name.toStdString();
+        pred_mwn.name = cur_img_name.toStdString();
 
         m_save_info.org_buffer.push(org_mwn);
         m_save_info.pred_buffer.push(pred_mwn);
@@ -1989,8 +1990,6 @@ void MainWindow::on_btn_select_model_clicked()
         return;
 
     connect(futureWatcher.get(), SIGNAL(started()), this, SLOT(set_model_started()));
-
-    // set_model 실행 thread가 종료
     connect(futureWatcher.get(), SIGNAL(finished()), this, SLOT(set_model_completed()));
 
     future = QtConcurrent::run(set_model, modelPath, ui->cbx_select_fp16->isChecked());
@@ -2001,11 +2000,18 @@ void MainWindow::set_model_started(){
     if ( ui->Model_Proper->currentIndex() == 0){ // Info Page -> Status Page
         ui->Model_Proper->setCurrentWidget(ui->Model_Status_Page);
     }
+    if(class_table_availbale == true){
+        class_table_availbale = false;
+    }
 
     ui->lab_model_status->setText("Loading Model...\nIt may take a few seconds...");
     ui->btn_select_model->setEnabled(false);
     ui->btn_select_gpu->setEnabled(false);
     ui->cbx_select_fp16->setEnabled(false);
+
+    // Clear class label and inference time
+    ui->edit_show_inf->clear();
+    ui->edit_show_class->clear();
 
     setClassTable(false);
 }
@@ -2019,16 +2025,19 @@ void MainWindow::set_model_completed(){
     if(!modelPath.isEmpty() && (get_model_status() == nrt::STATUS_SUCCESS)){
         qDebug() << "NRT) Set Model Completed! :"  << modelPath;
 
-        // Model Name Issue
-        QStringList path_split = modelPath.split(QLatin1Char(PathSeparator[0]));
-        QString modelName = path_split.at(path_split.size()-1);
-        ui->lab_model_name->setText(modelName);
+        QString model_name = modelPath.split(QDir::separator()).last();
 
         //setTabelColumn(true);
-        setModelInfo(true);
+        setModelInfo(true, model_name);
     }
     else {
         qDebug() << "NRT) Set Model Failed!";
+
+        QMessageBox messageBox;
+        messageBox.critical(0,"Error","Model initialization has falied!");
+        messageBox.setFixedSize(500,200);
+
+        ui->lab_model_status->setText("Please Select Model.");
     }
 
     ui->btn_select_model->setEnabled(true);

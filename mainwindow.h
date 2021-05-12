@@ -1,4 +1,4 @@
-#ifndef MAINWINDOW_H
+﻿#ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
 #include "shared_include.h"
@@ -63,7 +63,7 @@ private slots:
     void resultItemClicked(int row, int col);
     void resultVerClicked(int row);
     void on_btn_save_img_result_clicked();
-    void setModelInfo(bool flag);
+    void setModelInfo(bool flag, QString model_name);
     void setClassTable(bool flag);
     void tableItemClicked(int row, int col);
     void tableItemChanged(int row, int col);
@@ -142,6 +142,8 @@ private:
     // FOR AI EXPO
     bool macro_flag = false;
     bool macro_cam_flag = false;
+
+    bool class_table_availbale = false;
 };
 
 #endif // MAINWINDOW_H

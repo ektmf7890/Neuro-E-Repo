@@ -1,4 +1,4 @@
-#include "predict.h"
+﻿#include "predict.h"
 
 nrt::Status status;
 
@@ -145,6 +145,10 @@ nrt::NDBuffer seg_execute (nrt::NDBuffer image_buff, std::chrono::duration<doubl
                 return nrt::NDBuffer();
             }
         }
+        else{
+            qDebug() << "No prediction map available.";
+            return nrt::NDBuffer();
+        }
 
         /*
         if(PROB_IDX != -1) {
@@ -179,6 +183,10 @@ nrt::NDBuffer seg_execute (nrt::NDBuffer image_buff, std::chrono::duration<doubl
 
         if(PRED_IDX != -1)
             merged_pred_output = outputs.get_at(PRED_IDX);
+        else{
+            qDebug() << "No prediction map available.";
+            return nrt::NDBuffer();
+        }
         /*
         if (PROB_IDX != -1)
             merged_prob_output = outputs.get_at(PROB_IDX);
