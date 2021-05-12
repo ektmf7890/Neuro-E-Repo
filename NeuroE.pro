@@ -27,7 +27,10 @@ SOURCES += \
         mainwindow.cpp \
     usbcam.cpp \
     nrtexe.cpp \
-    predict.cpp
+    predict.cpp \
+    sqlite3.c \
+    database.cpp \
+    model_select.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -35,7 +38,10 @@ HEADERS += \
     nrtexe.h \
     usbcam.h \
     shared_include.h \
-    predict.h
+    predict.h \
+    sqlite3.h \
+    database.h \
+    model_select.h
 
 RESOURCES += \
     qtresource.qrc \
@@ -69,3 +75,8 @@ LIBS += -L/usr/lib \
 #        -lopencv_photo \
 #        -lopencv_flann \
 
+LIBS += -pthread \
+        -ldl \
+        -lstdc++fs
+
+QMAKE_CXXFLAGS += -pthread --std=c++17 -ldl -lstdc++fs

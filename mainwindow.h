@@ -2,10 +2,11 @@
 #define MAINWINDOW_H
 
 #include "shared_include.h"
-
 #include <nrtexe.h>
 #include <usbcam.h>
 #include <predict.h>
+#include <database.h>
+#include <experimental/filesystem>
 
 struct Mat_With_Name
 {
@@ -46,6 +47,7 @@ public:
 
     void center_and_resize();
     void save_worker();
+    void sqliteDBSetup();
     shared_ptr<UsbCam> m_usbCam;
 
 public slots:
@@ -124,6 +126,9 @@ private:
     // Image input and output folder directory.
     std::shared_ptr<QString> m_input_path;
     std::shared_ptr<QString> m_output_path;
+
+    // SQLite database connection
+    std::shared_ptr<neuroeDB> m_nrtDB;
 
     bool show_result_table = false;
     bool show_pred_flag = true;

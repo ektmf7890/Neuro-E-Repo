@@ -1,7 +1,8 @@
-#ifndef QT_UTIL_H
+﻿#ifndef QT_UTIL_H
 #define QT_UTIL_H
 
 #include <QMainWindow>
+#include <QWidget>
 #include <QScreen>
 #include <QList>
 #include <QMessageBox>
@@ -72,5 +73,6 @@ using namespace cv;
 using namespace std;
 
 #include <sqlite3.h>
+
 
 #endif // QT_UTIL_H
