@@ -171,14 +171,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->cbx_select_fp16->setToolTip("Slower when creating Executor, but Faster when predicting Img");
     ui->cbx_select_fp16->setWhatsThis("Slower when creating Executor, but Faster when predicting Img");
     ui->lab_model_status->setAlignment(Qt::AlignCenter);
-<<<<<<< HEAD
     setModelInfo(false, "");
-=======
-    setModelInfo(false);
-
-    // DB Setup
-    sqliteDBSetup();
->>>>>>> a69467ee8d32131bef9cdb93126fe644c427ebe3
 }
 
 MainWindow::~MainWindow()
@@ -217,23 +210,6 @@ void MainWindow::sqliteDBSetup() {
     m_nrtDB->CreateImagesTable();
     m_nrtDB->CreateEvaluationSetTable();
     m_nrtDB->CreateResultImagesTable();
-
-    if(!fs::exists(imagesPath)){
-        cout << "Creating new image path: " << imagesPath << endl;
-        fs::create_directory(imagesPath);
-    }
-    if(!fs::exists(resultImagesPath)){
-        cout << "Creating new image path: " << resultImagesPath << endl;
-        fs::create_directory(resultImagesPath);
-    }
-    if(!fs::exists(resultCSVPath)){
-        cout << "Creating new image path: " << resultCSVPath << endl;
-        fs::create_directory(resultCSVPath);
-    }
-    if(!fs::exists(modelsPath)){
-        cout << "Creating new image path: " << modelsPath << endl;
-        fs::create_directory(modelsPath);
-    }
 
     m_nrtDB->Close();
 }
@@ -2028,9 +2004,9 @@ void MainWindow::on_btn_select_model_clicked()
             return;
     }
 
-    QString modelPath = selectModelWindow();
+//    QString modelPath = selectModelWindow();
 
-//    QString modelPath = QFileDialog::getOpenFileName(this, tr("Select Model"), QDir::homePath(), tr("default (*.net)"));
+    QString modelPath = QFileDialog::getOpenFileName(this, tr("Select Model"), QDir::homePath(), tr("default (*.net)"));
 
     if (modelPath == "")
         return;

@@ -7,6 +7,7 @@
 #include <predict.h>
 #include <database.h>
 #include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
 
 struct Mat_With_Name
 {

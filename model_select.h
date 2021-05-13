@@ -24,16 +24,9 @@ class model_select : public QWidget
 
 public:
     model_select(QWidget *parent = 0, const char *name = 0 );
-    ~model_select();
-
 private:
-    AString
 
 public slots:
-    void deleteBtnClicked();
-    void selectModelsBtnClicked();
-    void selectFolderBtnClicked();
-    void selectBtnClicked();
 };
 
 #endif // MODEL_SELECT_H
