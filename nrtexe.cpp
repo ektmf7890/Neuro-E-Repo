@@ -230,7 +230,7 @@ nrt::DType get_model_input_dtype(int idx){
 
 nrt::InterpolationType get_model_interpolty(int idx){
     if (get_model_status() != nrt::STATUS_SUCCESS)
-        return nrt::InterpolationType();
+        return nrt::InterpolationType::INTER_LINEAR;
     return m_model_ptr->get_InterpolationType(idx);
 }
 

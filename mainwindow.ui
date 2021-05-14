@@ -767,7 +767,7 @@
                         <number>15</number>
                        </property>
                        <item>
-                        <widget class="QComboBox" name="com_cam_select">
+                        <widget class="QComboBox" name="com_cam_input_select">
                          <property name="sizePolicy">
                           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                            <horstretch>7</horstretch>
@@ -785,7 +785,7 @@
                           </sizepolicy>
                          </property>
                          <property name="text">
-                          <string>Select Cam</string>
+                          <string>Select Input Method</string>
                          </property>
                         </widget>
                        </item>

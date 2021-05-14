@@ -44,6 +44,12 @@ nrt::NDBuffer get_img_buffer(cv::Mat ORG_IMG) {
         qDebug() << "resize failed";
         return nrt::NDBuffer();
     }
+    nrt::Shape resized_img_buffer_shape = resized_img_buffer.get_shape();
+    qDebug() << "Resized image buffer: [";
+    for(int i=0; i < resized_img_buffer_shape.num_dim; i++) {
+        qDebug() << resized_img_buffer_shape.dims[i] << " ";
+    }
+    qDebug() << "]";
 
     return resized_img_buffer;
 }

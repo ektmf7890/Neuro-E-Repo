@@ -131,6 +131,12 @@ private:
     // SQLite database connection
     std::shared_ptr<neuroeDB> m_nrtDB;
 
+    // Video Input Capture Object
+    cv::VideoCapture m_videoInputCap;
+
+    bool video_mode_flag = false;
+    bool cam_mode_flag = false;
+
     bool show_result_table = false;
     bool show_pred_flag = true;
 

@@ -136,7 +136,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // CAM Select ComboBox
     camType.append("USB CAM");
-    ui->com_cam_select->addItems(camType);
+    camType.append("Video Input");
+    ui->com_cam_input_select->addItems(camType);
 
     // CAM Save Style
     ui->rad_cam_rtmode->setChecked(true);
@@ -172,6 +173,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->cbx_select_fp16->setWhatsThis("Slower when creating Executor, but Faster when predicting Img");
     ui->lab_model_status->setAlignment(Qt::AlignCenter);
     setModelInfo(false, "");
+
+    ui->Cam_Save->hide();
 }
 
 MainWindow::~MainWindow()
@@ -237,7 +240,7 @@ void MainWindow::paintEvent(QPaintEvent *paintEvent)
 }
 
 void MainWindow::setCamSelectEnabled(bool flag) {
-    ui->com_cam_select->setEnabled(flag);
+    ui->com_cam_input_select->setEnabled(flag);
     ui->btn_cam_select->setEnabled(flag);
 }
 
@@ -1173,6 +1176,7 @@ void MainWindow::segSetResults(nrt::NDBuffer merged_pred_output, cv::Mat &PRED_I
         // Threshold by size
         nrt::NDBuffer bounding_rects;
         nrt::NDBuffer size_threshold_buf = get_model_size_threshold();
+
         if (size_threshold_buf.empty()) {
             size_threshold_buf = nrt::NDBuffer::zeros(nrt::Shape(get_model_class_num(), 3), nrt::DTYPE_INT32);
             int* thres_ptr = size_threshold_buf.get_at_ptr<int>();
@@ -1229,7 +1233,7 @@ void MainWindow::segSetResults(nrt::NDBuffer merged_pred_output, cv::Mat &PRED_I
         }
 
         vector<bool> exist_class(get_model_class_num());
-        // Class Color Pixel in Result Image
+        // Class Color Pixel in Result Image;
         unsigned char* output_ptr = merged_pred_output.get_at_ptr<unsigned char>(0);
         int img_h = PRED_IMG.rows;
         int img_w = PRED_IMG.cols;
@@ -1240,11 +1244,16 @@ void MainWindow::segSetResults(nrt::NDBuffer merged_pred_output, cv::Mat &PRED_I
         for (int h = 0; h < img_h; h++) {
             cur_ofs = h * img_w;
             for (int w = 0; w < img_w; w++) {
-                cur_class = output_ptr[cur_ofs + w];
-                if (cur_class < 1)
+                if(cur_class < 1){
                     continue;
+                }
+                if (cur_class > get_model_class_num()){
+                    continue;
+                }
+
                 exist_class[cur_class-1] = true;
                 seg_pixel_cnt[cur_class-1] += 1;
+
                 QColor cur_class_color = COLOR_VECTOR[cur_class-1];
                 cv::Vec3b pix = PRED_IMG.at<cv::Vec3b>(h, w);
                 pix[2] = (int)(((double)pix[2] * alp_src) + ((double)cur_class_color.red() * alp_mask));
@@ -1527,7 +1536,7 @@ void MainWindow::showResult() {
     int cur_mode = ui->Mode_Setting_Stack->currentIndex();
 
     if (cur_mode == 0) {  // CAM Mode
-        if (ui->com_cam_select->currentIndex() == 0) {  // USB Cam
+        if (ui->com_cam_input_select->currentIndex() == 0) {  // USB Cam
             // shared_ptr<UsbCam> m_usbCam;
             if (!m_usbCam->isExist()) {
                 if(m_timer)
@@ -1543,11 +1552,31 @@ void MainWindow::showResult() {
             }
 
             ORG_IMG = m_usbCam->m_frame.clone();
-            QString time_format = "yyMMdd_HHmmss_zzz";
-            QDateTime now = QDateTime::currentDateTime();
-            std::string time_str = now.toString(time_format).toStdString();
-            cur_img_name = QString::fromStdString(time_str + IMG_FORMAT);
         }
+
+        // Video Input
+        else if (ui->com_cam_input_select->currentIndex() == 1){
+            if(!m_videoInputCap.isOpened()){
+                qDebug() << "Video capture is not opened.";
+                return;
+            }
+            m_videoInputCap >> ORG_IMG;
+
+            if(ORG_IMG.empty()){
+                qDebug() << "Video is over!";
+                QMessageBox::information(this, "Notification", "The video is over.");
+                m_videoInputCap.release();
+                video_mode_flag = false;
+                on_btn_cam_pause_clicked();
+                return;
+            }
+
+        }
+
+        QString time_format = "yyMMdd_HHmmss_zzz";
+        QDateTime now = QDateTime::currentDateTime();
+        std::string time_str = now.toString(time_format).toStdString();
+        cur_img_name = QString::fromStdString(time_str + IMG_FORMAT);
     }
 
     else if (cur_mode == 1) {
@@ -1603,18 +1632,17 @@ void MainWindow::showResult() {
     nrt::NDBuffer merged_pred_output; //Segmentation
 //    nrt::NDBuffer merged_prob_output; //Segmentation
 
+    std::chrono::duration<double, std::milli> inf_time;
     qDebug() << "Show Result) Execute";
     QString model_type = get_model_type();
     if(get_model_status() == nrt::STATUS_SUCCESS && get_executor_status() == nrt::STATUS_SUCCESS && class_table_availbale){
         if(model_type == "Segmentation"){
+//            if(video_mode_flag && ORG_IMG.rows>1000 && ORG_IMG.cols>1000){
+//                cv::resize(ORG_IMG, ORG_IMG, cv::Size(), 0.5, 0.5);
+//            }
+
             nrt::NDBuffer img_buffer = get_img_buffer(ORG_IMG);
-            std::chrono::duration<double, std::milli> inf_time;
-//            vector<nrt::NDBuffer> output_vector = seg_execute(img_buffer);
             merged_pred_output = seg_execute(img_buffer, inf_time);
-            /*
-            merged_pred_output = output_vector[0];
-            merged_prob_output = output_vector[1];
-            */
             ui->edit_show_inf->setText(QString::number(inf_time.count(), 'f', 3));
         }
         else if(model_type == "Classification" || model_type == "Detection" || model_type == "OCR" || model_type == "Anomaly") {
@@ -1780,30 +1808,57 @@ void MainWindow::on_btn_img_mode_clicked()
 
 void MainWindow::on_btn_cam_select_clicked()
 {
-    if (ui->com_cam_select->currentIndex() == 0) {
-        if (m_timer.use_count() > 0)
-            m_timer.reset();
-        if (m_usbCam.use_count() > 0)
-            m_usbCam.reset();
+    if(m_timer.use_count() > 0)
+        m_timer.reset();
+    if(m_usbCam.use_count() > 0)
+        m_usbCam.reset();
 
+    // USB CAM
+    if (ui->com_cam_input_select->currentIndex() == 0) {
         m_usbCam = std::make_shared<UsbCam>();
         m_usbCam->selectCam();
         if (!m_usbCam->isExist()) {
+            if(cam_mode_flag)
+                cam_mode_flag = false;
             return;
         }
-
-        // if both executor or model is created
-        /*if(get_model_status() == nrt::STATUS_SUCCESS && get_executor_status() == nrt::STATUS_SUCCESS){
-            showResult();
-            on_btn_cam_play_clicked();
-            setCamControlEnabled(true);
-        }
-        */
+        cam_mode_flag = true;
 
         showResult();
         setCamControlEnabled(true);
         on_btn_cam_play_clicked();
         ui->edit_show_inf->setText("");
+    }
+
+    // Video Input
+    else if (ui->com_cam_input_select->currentIndex() == 1){
+        if(m_videoInputCap.isOpened()){
+            m_videoInputCap.release();
+        }
+
+        // VideoCapture(const String& filename, int apiPreference = CAP_ANY);
+        QString video_filename = QFileDialog::getOpenFileName(this,
+                                                              tr("Select Input Video"),
+                                                              QDir::homePath(), tr(" (*.avi, *.mp4)"));
+        if(video_filename.isEmpty()){
+            QMessageBox::information(this, "Notification", "No video was selected");
+            return;
+        }
+
+        m_videoInputCap.open(video_filename.toStdString(), cv::CAP_ANY);
+        m_videoInputCap.set(cv::CAP_PROP_FPS, 30);
+
+        if(!m_videoInputCap.isOpened()){
+            qDebug() << "Failed to open the video file.";
+            if(video_mode_flag)
+                video_mode_flag = false;
+            return;
+        }
+        video_mode_flag = true;
+
+        showResult();
+        setCamControlEnabled(true);
+        on_btn_cam_play_clicked();
     }
 }
 
@@ -1826,7 +1881,16 @@ void MainWindow::on_btn_cam_save_clicked()
 void MainWindow::on_btn_cam_play_clicked()
 {
     qDebug() << "come cam play";
-    if (m_usbCam.use_count() <= 0) { // Cam doesn't Exist
+
+    // CAM Mode
+    if (cam_mode_flag && m_usbCam.use_count() <= 0) {
+        qDebug() << "Cam mode but camera is not open.";
+        return;
+    }
+
+    // Video Input mode
+    if(video_mode_flag && !m_videoInputCap.isOpened()){
+        qDebug() << "Video mode but capture is not open.";
         return;
     }
 
@@ -1883,7 +1947,8 @@ void MainWindow::on_btn_cam_play_clicked()
         connect(m_timer.get(), SIGNAL(timeout()), this, SLOT(showResult()));
         m_timer->setInterval(0);
         m_timer->start();
-        m_usbCam->playCam();
+        if(m_usbCam.use_count() >0 )
+            m_usbCam->playCam();
         setTabelColumn(true);
     }
     else {          // Already Connected
@@ -1932,7 +1997,8 @@ void MainWindow::on_btn_cam_play_clicked()
         setCamSaveChangeEnabled(false);
         m_timer->setInterval(0);
         m_timer->start();
-        m_usbCam->playCam();
+        if(cam_mode_flag)
+            m_usbCam->playCam();
     }
     ui->btn_img_mode->setEnabled(false);
 }
@@ -1944,7 +2010,9 @@ void MainWindow::on_btn_cam_pause_clicked()
     if (m_timer->isActive()) {
         qDebug() << "CAM Mode) Pause";
         m_timer->stop();
-        m_usbCam->pauseCam();
+        if(cam_mode_flag && m_usbCam->isExist())
+            m_usbCam->pauseCam();
+
     }
 
     if (m_save_timer.use_count() > 0)
@@ -1968,6 +2036,13 @@ void MainWindow::on_btn_cam_stop_clicked()
     if (m_usbCam.use_count() > 0) {
         qDebug() << "CAM Mode) Delete CAM";
         m_usbCam.reset();
+        cam_mode_flag = false;
+    }
+
+    if(m_videoInputCap.isOpened()){
+        qDebug() << "VIDEO Mode) Delete Video Capture";
+        m_videoInputCap.release();
+        video_mode_flag = false;
     }
 
     setCamSelectEnabled(true);
@@ -2396,3 +2471,4 @@ void MainWindow::on_spb_img_cur_idx_valueChanged(int cur_idx)
     ui->lab_show_res->setPixmap(m_qpixmap.scaled(ui->lab_show_res->width(), ui->lab_show_res->height(), Qt::KeepAspectRatio));
     ui->edit_img_name->setText(cur_img_name);
 }
+
