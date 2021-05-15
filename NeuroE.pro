@@ -28,9 +28,7 @@ SOURCES += \
     usbcam.cpp \
     nrtexe.cpp \
     predict.cpp \
-    sqlite3.c \
-    database.cpp \
-    model_select.cpp
+    database.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -39,9 +37,7 @@ HEADERS += \
     usbcam.h \
     shared_include.h \
     predict.h \
-    sqlite3.h \
-    database.h \
-    model_select.h
+    database.h
 
 RESOURCES += \
     qtresource.qrc \

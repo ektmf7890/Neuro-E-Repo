@@ -65,7 +65,7 @@ private slots:
     void setTabelColumn(bool flag);
     void resultItemClicked(int row, int col);
     void resultVerClicked(int row);
-    void on_btn_save_img_result_clicked();
+//    void on_btn_save_img_result_clicked();
     void setModelInfo(bool flag, QString model_name);
     void setClassTable(bool flag);
     void tableItemClicked(int row, int col);
@@ -107,6 +107,8 @@ private slots:
     void on_spb_img_cur_idx_valueChanged(int arg1);
 
     void on_btn_show_prediction_clicked();
+
+    void on_com_cam_input_select_currentTextChanged(const QString& text);
 
     void claSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vector<std::string> &new_row);
     void segSetResults(nrt::NDBuffer merged_pred_output, cv::Mat &PRED_IMG, vector<std::string> &new_row);

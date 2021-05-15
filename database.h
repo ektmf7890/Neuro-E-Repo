@@ -1,16 +1,12 @@
 ﻿#pragma once
 #include <iostream>
-#include "sqlite3.h"
-using namespace std;
 
-const static char* QUERY_USER_GROUPS_TABLE_CREATE = "CREATE TABLE IF NOT EXISTS UserGroups (Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, Name TEXT NOT NULL, CreatedOn TEXT NOT NULL)";
+using namespace std;
 
 const static char* QUERY_IMAGE_SETS_TABLE_CREATE = "CREATE TABLE IF NOT EXISTS ImageSets ("\
                 "Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "\
                 "Name TEXT NOT NULL, "\
-                "CreatedOn TEXT NOT NULL, "\
-                "UserGroupId INTEGER NOT NULL,"\
-                "FOREIGN KEY(UserGroupId) REFERENCES UserGroups(Id) ON DELETE CASCADE );";
+                "CreatedOn TEXT NOT NULL )";
 
 const static char* QUERY_IMAGES_TABLE_CREATE = "CREATE TABLE IF NOT EXISTS Images ("\
                 "Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "\
@@ -62,8 +58,6 @@ const static char* QUERY_DB_COMMIT = "COMMIT";
 
 const static char* QUERY_DB_ROLLBACK = "ROLLBACK";
 
-const static char* QUERY_USER_GROUP_INSERT = "INSERT OR REPLACE INTO UserGroups(Name, CreatedOn) VALUES(?, ?)";
-
 const static char* QUERY_IMAGE_SET_INSERT = "INSERT OR REPLACE INTO ImageSets(Name, CreatedOn, UserGroupId) VALUES(?, ?, ?)";
 
 const static char* QUERY_MODEL_INSERT = "INSERT OR REPLACE INTO Models(Name, CreatedOn, Type, Platform, SearchSpace, NumClasses, ModelPath) VALUES(?, ?, ?, ?, ?, ?, ?)";
@@ -82,13 +76,15 @@ private:
 public:
     sqlite3* db;
 
+    bool nre_db_exists();
+    bool nre_db_initialSetup();
+
     bool Open(const char* dbFileName);
     bool Close();
     bool Begin();
     bool Commit();
     bool RollBack();
 
-    bool CreateUserGroupTable();
     bool CreateImageSetTable();
     bool CreateModelTable();
     bool CreateEvaluationSetTable();
@@ -98,14 +94,12 @@ public:
     bool DropTable(const char* table_name);
     bool IsTableExist(const char* table_name);
 
-    bool InsertUserGroup(const char* name);
     bool InsertImageSet(const char* name, int userGroupId);
     bool InsertEvaluationSet(int imageSetId, int modelId, const char* resultCSVPath);
     bool InsertImage(int imageSetId, const char* name, const char* imagePath);
     bool InsertResultImage(int evaluationSetId, int imageId, const char* resultImagePath, double inferTime);
     bool InsertModel(const char* name, int type, const char* platform, int searchSpace, int numOfClasses, const char* modelPath);
 
-    bool DeleteUserGroup();
     bool DeleteImageSet();
     bool DeleteModel();
     bool DeleteEvaluationSet();
