@@ -87,7 +87,9 @@ private slots:
     void on_btn_cam_stop_clicked();
 
     void on_rad_cam_rtmode_clicked();
-    void on_rad_cam_savemode_clicked();
+    void on_rad_cam_autosave_clicked();
+    void on_rad_cam_mansave_clicked();
+
     void on_chb_show_prediction_clicked();
 
     void on_btn_select_model_clicked();
@@ -130,9 +132,6 @@ private:
     std::shared_ptr<QString> m_input_path;
     std::shared_ptr<QString> m_output_path;
 
-    // SQLite database connection
-    std::shared_ptr<neuroeDB> m_nrtDB;
-
     // Video Input Capture Object
     cv::VideoCapture m_videoInputCap;
 
@@ -145,7 +144,8 @@ private:
     bool mode_flag = false; // false: CAM Mode, true: IMG Mode
 
     bool cur_save_flag = false;  // true: push to buffer
-    bool cam_save_flag = false;  // false: Realtime, true: Save
+    bool cam_autosave_flag = false;  // false: Realtime, true: Save
+    bool cam_mansave_flag = false;
 
     QStringList inf_img_list;
     bool img_show_time_flag = false; // true: show each image in setted show time

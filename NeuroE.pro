@@ -27,8 +27,7 @@ SOURCES += \
         mainwindow.cpp \
     usbcam.cpp \
     nrtexe.cpp \
-    predict.cpp \
-    database.cpp
+    predict.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -36,8 +35,7 @@ HEADERS += \
     nrtexe.h \
     usbcam.h \
     shared_include.h \
-    predict.h \
-    database.h
+    predict.h
 
 RESOURCES += \
     qtresource.qrc \
