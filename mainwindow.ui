@@ -874,7 +874,7 @@
                         <widget class="QWidget" name="Manual_Save" native="true">
                          <layout class="QHBoxLayout" name="horizontalLayout_6">
                           <item>
-                           <widget class="QRadioButton" name="rad_man_save">
+                           <widget class="QRadioButton" name="rad_cam_mansave">
                             <property name="sizePolicy">
                              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                               <horstretch>2</horstretch>
