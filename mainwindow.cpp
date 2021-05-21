@@ -172,6 +172,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->cbx_select_fp16->setWhatsThis("Slower when creating Executor, but Faster when predicting Img");
     ui->lab_model_status->setAlignment(Qt::AlignCenter);
     setModelInfo(false, "");
+
+    ui->Cam_Save->hide();
 }
 
 MainWindow::~MainWindow()
@@ -1215,13 +1217,22 @@ void MainWindow::segSetResults(nrt::NDBuffer merged_pred_output, cv::Mat &PRED_I
             int rect_w = output_rect_ptr[4];
             int rect_class_index = output_rect_ptr[5];
 
-            if (rect_class_index < 1)
+            if (rect_class_index < 1 || rect_class_index > get_model_class_num()){
                 continue;
+            }
+
             seg_blob_cnt[rect_class_index-1] += 1;
+
             int r, g, b;
+
             COLOR_VECTOR[rect_class_index-1].getRgb(&r, &g, &b);
+
             cv::Scalar class_color_scalar = cv::Scalar(b, g, r);
-            const char* classname = ui->tableWidget_class->item(rect_class_index-1, NAME_COL)->text().toStdString().c_str();
+
+            const char* classname = "";
+            if(ui->tableWidget_class->item(rect_class_index-1, NAME_COL))
+                classname = ui->tableWidget_class->item(rect_class_index-1, NAME_COL)->text().toStdString().c_str();
+
             if (classname) {
                 //cv::putText(PRED_IMG, classname, cv::Point(rect_x, rect_y), FONT_HERSHEY_SIMPLEX, 1, white, 7);
                 cv::putText(PRED_IMG, classname, cv::Point(rect_x, rect_y), FONT_HERSHEY_SIMPLEX, 1, class_color_scalar, 4);
@@ -1241,8 +1252,9 @@ void MainWindow::segSetResults(nrt::NDBuffer merged_pred_output, cv::Mat &PRED_I
             cur_ofs = h * img_w;
             for (int w = 0; w < img_w; w++) {
                 cur_class = output_ptr[cur_ofs + w];
-                if (cur_class < 1)
+                if (cur_class < 1 || cur_class > get_model_class_num()){
                     continue;
+                }
                 exist_class[cur_class-1] = true;
                 seg_pixel_cnt[cur_class-1] += 1;
                 QColor cur_class_color = COLOR_VECTOR[cur_class-1];
@@ -1313,8 +1325,10 @@ void MainWindow::detSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vec
             BoundingBox bbox = convert_to_bounding_box(bcyxhw_ptr + box_idx * 6, h_ratio, w_ratio);
             const float* probs = prob_ptr + box_idx * (get_model_class_num() + 1);
 
-            if (bbox.class_number < 1)
+            if (bbox.class_number < 1 || bbox.class_number > get_model_class_num()){
+                qDebug() << "Detection Box class is either background or out of range.";
                 continue;
+            }
 
             // Treshold by size
             int h_thres, w_thres, a_thres;
@@ -1451,6 +1465,10 @@ void MainWindow::ocrSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vec
                           2
                           );
 
+            if(bbox.class_number < 1 || bbox.class_number >  get_model_class_num()){
+                qDebug() << "OCR Box class is either background or out of range.";
+                continue;
+            }
             const char* classname = get_model_class_name(bbox.class_number).toStdString().c_str();
             if (classname) {
                 cv::Size org_size = cv::getTextSize(std::string(classname), cv::FONT_HERSHEY_SIMPLEX, 1.0, 4, 0);
