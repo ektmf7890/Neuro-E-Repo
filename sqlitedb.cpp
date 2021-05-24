@@ -36,7 +36,7 @@ QSqlError sqliteDB::InitialDBSetup(){
 
     if(!db.open()){
         err = db.lastError();
-        QSqlDatabase::removeDatabase(DBConnectionName);
+        db.close();
         qDebug() << "Databse connection failed to open. Closing the database connection now.";
         return err;
     }

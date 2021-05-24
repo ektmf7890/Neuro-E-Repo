@@ -75,4 +75,6 @@ LIBS += -pthread \
         -ldl \
         -lstdc++fs
 
+LIBS += -L/var/lib/dpkg/info/libqt5sql5
+
 QMAKE_CXXFLAGS += -pthread --std=c++17 -ldl -lstdc++fs
