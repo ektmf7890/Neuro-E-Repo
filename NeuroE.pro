@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui multimedia multimediawidgets
+QT       += core gui multimedia multimediawidgets sql
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -27,7 +27,8 @@ SOURCES += \
         mainwindow.cpp \
     usbcam.cpp \
     nrtexe.cpp \
-    predict.cpp
+    predict.cpp \
+    sqlitedb.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -35,7 +36,8 @@ HEADERS += \
     nrtexe.h \
     usbcam.h \
     shared_include.h \
-    predict.h
+    predict.h \
+    sqlitedb.h
 
 RESOURCES += \
     qtresource.qrc \

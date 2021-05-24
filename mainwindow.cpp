@@ -179,6 +179,12 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->cbx_select_fp16->setWhatsThis("Slower when creating Executor, but Faster when predicting Img");
     ui->lab_model_status->setAlignment(Qt::AlignCenter);
     setModelInfo(false, "");
+
+    QSqlError err = m_db->InitialDBSetup();
+    if(err.type() != QSqlError::NoError){
+        qDebug() << "Initial DB Setup failed";
+        m_db.reset();
+    }
 }
 
 MainWindow::~MainWindow()
@@ -277,6 +283,9 @@ bool MainWindow::checkCanSave() {
 //        ui->edit_cam_save_term->setFocus();
 //        return false;
 //    }
+
+    // check if the save term is set
+    // check if the save path is set
     delete err_msg;
     return true;
 }
@@ -1751,7 +1760,7 @@ void MainWindow::on_rad_cam_autosave_clicked()
 
 void MainWindow::on_rad_cam_mansave_clicked(){
     cam_mansave_flag = true;
-    cam_autosave_flas = false;
+    cam_autosave_flag = false;
 }
 
 void MainWindow::on_chb_show_prediction_clicked()
@@ -1893,9 +1902,22 @@ void MainWindow::on_btn_cam_play_clicked()
     if (m_timer.use_count() <= 0) { // First Connect with showResult()
         qDebug() << "CAM Mode) Play";
 
-        // Not save mode
-        if (m_save_timer.use_count() > 0)
-            m_save_timer.reset();
+        // Auto save mode
+        if(cam_autosave_flag){
+
+        }
+
+        // Manual save mode
+        else if(cam_mansave_flag){
+
+        }
+
+        // Realtime inference only mode
+        else{
+            if(m_save_timer.use_count() > 0){
+                m_save_timer.reset();
+            }
+        }
 
         setCamSelectEnabled(false);
         setCamSaveEditEnabled(false);

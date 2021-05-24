@@ -2,12 +2,12 @@
 #define MAINWINDOW_H
 
 #include "shared_include.h"
+#include <sqlitedb.h>
 #include <nrtexe.h>
 #include <usbcam.h>
 #include <predict.h>
-#include <database.h>
-#include <experimental/filesystem>
-namespace fs = std::experimental::filesystem;
+
+#include <QSqlError>
 
 struct Mat_With_Name
 {
@@ -158,6 +158,9 @@ private:
     bool macro_cam_flag = false;
 
     bool class_table_availbale = false;
+
+    // SQLite Databse class
+    std::shared_ptr<sqliteDB> m_db = std::make_shared<sqliteDB>();
 };
 
 #endif // MAINWINDOW_H
