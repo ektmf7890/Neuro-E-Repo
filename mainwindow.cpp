@@ -180,8 +180,6 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->lab_model_status->setAlignment(Qt::AlignCenter);
     setModelInfo(false, "");
 
-    ui->Cam_Save->hide();
-
     QSqlError err = m_db->InitialDBSetup();
     if(err.type() != QSqlError::NoError){
         qDebug() << "Initial DB Setup failed";
