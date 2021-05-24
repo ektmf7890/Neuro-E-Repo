@@ -24,7 +24,7 @@ const auto CREATE_TABLE_IMAGE_SETS = QLatin1String(
             )");
 
 const auto CREATE_TABLE_IMAGES = QLatin1String(R"(
-            CREATE TABLE IF NOT EXITS Images(
+            CREATE TABLE IF NOT EXISTS Images(
                 Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                 Name TEXT NOT NULL,
                 CreatedOn TEXT NOT NULL,
@@ -68,9 +68,9 @@ const auto CREATE_TABLE_RESULT_ITEMS = QLatin1String(
                 InfTime INTEGER NOT NULL,
                 ResultImagePath TEXT NOT NULL,
                 ImageId INTEGER NOT NULL,
-                EvaluationSetlId INTEGER NOT NULL,
-                FOREIGN KEY(ImageSetId) REFERENCES ImageSets(Id) ON DELETE CASCADE,
-                FOREIGN KEY(ModelId) REFERENCES Models(Id) ON DELETE CASCADE)
+                EvaluationSetId INTEGER NOT NULL,
+                FOREIGN KEY(ImageId) REFERENCES Images(Id) ON DELETE CASCADE,
+                FOREIGN KEY(EvaluationSetId) REFERENCES EvaluationSets(Id) ON DELETE CASCADE)
             )");
 
 const auto INSERT_IMAGE_SET = QLatin1String(
@@ -108,7 +108,7 @@ public:
 public:
     QSqlDatabase db;
 
-    QString DBPath = QString("%1%2").arg(qApp->applicationDirPath()).arg("/phonebook.db");
+    QString DBPath = QString("%1%2").arg(qApp->applicationDirPath()).arg("/neruore.db");
     QString DBConnectionName = "neuroeDB";
 
     QSqlError InitialDBSetup();

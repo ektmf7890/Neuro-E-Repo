@@ -8,6 +8,8 @@ QT       += core gui multimedia multimediawidgets sql
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
+QTPLUGIN += qsqlite
+
 TARGET = NeuroE
 TEMPLATE = app
 
@@ -46,18 +48,24 @@ RESOURCES += \
 FORMS += \
         mainwindow.ui
 
-INCLUDEPATH += /usr/include/opencv4
+INCLUDEPATH += D:\\opencv\build\include
 
-LIBS += -L/usr/lib/aarch64-linux-gnu \
+INCLUDEPATH += D:\\nrt\include
+
+LIBS += -LD:\\opencv\build\x64\vc15\lib \
+        -lopencv_world452 \
+        -lopencv_world452d
+
+LIBS += -LD:\\nrt\lib\release \
         -lnrt
 
-LIBS += -L/usr/lib \
-        -lopencv_highgui \
-        -lopencv_videoio \
-        -lopencv_imgcodecs \
-        -lopencv_imgproc \
-        -lopencv_core \
-        -lsqlite3
+#LIBS += -L/usr/lib \
+#        -lopencv_highgui \
+#        -lopencv_videoio \
+#        -lopencv_imgcodecs \
+#        -lopencv_imgproc \
+#        -lopencv_core \
+#        -lsqlite3
 #        -lopencv_dnn \
 #        -lopencv_ml \
 #        -lopencv_objdetect \
@@ -71,8 +79,4 @@ LIBS += -L/usr/lib \
 #        -lopencv_photo \
 #        -lopencv_flann \
 
-LIBS += -pthread \
-        -ldl \
-        -lstdc++fs
 
-QMAKE_CXXFLAGS += -pthread --std=c++17 -ldl -lstdc++fs

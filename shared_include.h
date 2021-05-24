@@ -54,7 +54,7 @@
 #include <opencv2/imgcodecs.hpp>
 using namespace cv;
 
-#include <pthread.h>
+//#include <pthread.h>
 #include <thread>
 #include <mutex>
 #include <memory>
@@ -62,7 +62,7 @@ using namespace cv;
 #include <queue>
 #include <chrono>
 #include <stdio.h>
-#include <unistd.h>
+//#include <unistd.h>
 #include <stdlib.h>
 #include <string>
 #include <sys/stat.h>
@@ -72,7 +72,7 @@ using namespace cv;
 #include <regex>
 using namespace std;
 
-#include <sqlite3.h>
+//#include <sqlite3.h>
 
 
 #endif // QT_UTIL_H

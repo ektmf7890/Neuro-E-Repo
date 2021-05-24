@@ -261,7 +261,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="btn_show_img_result">
+              <widget class="QPushButton" name="btn_view_eval_stats">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                  <horstretch>0</horstretch>
@@ -286,7 +286,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="btn_save_img_result">
+              <widget class="QPushButton" name="btn_display_eval_results">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                  <horstretch>0</horstretch>
@@ -830,80 +830,104 @@
                         </spacer>
                        </item>
                        <item>
-                        <widget class="QWidget" name="Realtime_Mode" native="true">
-                         <layout class="QHBoxLayout" name="horizontalLayout_23">
+                        <widget class="QGroupBox" name="groupBox">
+                         <property name="title">
+                          <string/>
+                         </property>
+                         <layout class="QVBoxLayout" name="verticalLayout_15">
                           <property name="spacing">
-                           <number>6</number>
+                           <number>0</number>
                           </property>
                           <property name="leftMargin">
-                           <number>9</number>
+                           <number>0</number>
                           </property>
                           <property name="topMargin">
-                           <number>9</number>
+                           <number>0</number>
                           </property>
                           <property name="rightMargin">
-                           <number>9</number>
+                           <number>0</number>
                           </property>
                           <property name="bottomMargin">
-                           <number>9</number>
+                           <number>0</number>
                           </property>
                           <item>
-                           <widget class="QRadioButton" name="rad_cam_rtmode">
-                            <property name="text">
-                             <string>Realtime Inference Only</string>
-                            </property>
-                           </widget>
-                          </item>
-                         </layout>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QWidget" name="Auto_Save" native="true">
-                         <layout class="QHBoxLayout" name="horizontalLayout_15">
-                          <item>
-                           <widget class="QRadioButton" name="rad_cam_autosave">
-                            <property name="sizePolicy">
-                             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                              <horstretch>2</horstretch>
-                              <verstretch>0</verstretch>
-                             </sizepolicy>
-                            </property>
-                            <property name="text">
-                             <string>Auto Save Inference Results</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item>
-                           <widget class="QPushButton" name="btn_cam_save_settings">
-                            <property name="text">
-                             <string>Save Settings</string>
-                            </property>
-                           </widget>
-                          </item>
-                         </layout>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QWidget" name="Manual_Save" native="true">
-                         <layout class="QHBoxLayout" name="horizontalLayout_6">
-                          <item>
-                           <widget class="QRadioButton" name="rad_cam_mansave">
-                            <property name="sizePolicy">
-                             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                              <horstretch>2</horstretch>
-                              <verstretch>0</verstretch>
-                             </sizepolicy>
-                            </property>
-                            <property name="text">
-                             <string>Manually Save Inference Results</string>
-                            </property>
+                           <widget class="QWidget" name="Realtime_Mode" native="true">
+                            <layout class="QHBoxLayout" name="horizontalLayout_23">
+                             <property name="spacing">
+                              <number>6</number>
+                             </property>
+                             <property name="leftMargin">
+                              <number>9</number>
+                             </property>
+                             <property name="topMargin">
+                              <number>9</number>
+                             </property>
+                             <property name="rightMargin">
+                              <number>9</number>
+                             </property>
+                             <property name="bottomMargin">
+                              <number>9</number>
+                             </property>
+                             <item>
+                              <widget class="QRadioButton" name="rad_cam_rtmode">
+                               <property name="text">
+                                <string>Realtime Inference Only</string>
+                               </property>
+                              </widget>
+                             </item>
+                            </layout>
                            </widget>
                           </item>
                           <item>
-                           <widget class="QPushButton" name="btn_man_save_settings">
-                            <property name="text">
-                             <string>Save Settings</string>
-                            </property>
+                           <widget class="QWidget" name="Manual_Save" native="true">
+                            <layout class="QHBoxLayout" name="horizontalLayout_6">
+                             <item>
+                              <widget class="QRadioButton" name="rad_cam_mansave">
+                               <property name="sizePolicy">
+                                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                                 <horstretch>2</horstretch>
+                                 <verstretch>0</verstretch>
+                                </sizepolicy>
+                               </property>
+                               <property name="text">
+                                <string>Manually Save Inference Results</string>
+                               </property>
+                              </widget>
+                             </item>
+                             <item>
+                              <widget class="QPushButton" name="btn_man_save_settings">
+                               <property name="text">
+                                <string>Save Settings</string>
+                               </property>
+                              </widget>
+                             </item>
+                            </layout>
+                           </widget>
+                          </item>
+                          <item>
+                           <widget class="QWidget" name="Auto_Save" native="true">
+                            <layout class="QHBoxLayout" name="horizontalLayout_15">
+                             <item>
+                              <widget class="QRadioButton" name="rad_cam_autosave">
+                               <property name="sizePolicy">
+                                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                                 <horstretch>2</horstretch>
+                                 <verstretch>0</verstretch>
+                                </sizepolicy>
+                               </property>
+                               <property name="text">
+                                <string>Auto Save Inference Results</string>
+                               </property>
+                              </widget>
+                             </item>
+                             <item>
+                              <widget class="QPushButton" name="btn_cam_save_settings">
+                               <property name="text">
+                                <string>Save Settings</string>
+                               </property>
+                              </widget>
+                             </item>
+                            </layout>
                            </widget>
                           </item>
                          </layout>

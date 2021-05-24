@@ -111,12 +111,12 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->btn_show_prediction->setIcon(QIcon(":/icons/show.png"));
     ui->btn_show_prediction->setToolTip("Show Prediction");
     ui->btn_show_prediction->setIconSize(QSize(ui->btn_show_prediction->width()*0.5, ui->btn_show_prediction->height()*0.5));
-    ui->btn_show_img_result->setIcon(QIcon(":/icons/table.png"));
-    ui->btn_show_img_result->setToolTip("Show Result Table");
-    ui->btn_show_img_result->setIconSize(QSize(ui->btn_show_img_result->width()*0.5, ui->btn_show_img_result->height()*0.5));
-    ui->btn_save_img_result->setIcon(QIcon(":/icons/save.png"));
-    ui->btn_save_img_result->setToolTip("Save Result Table");
-    ui->btn_save_img_result->setIconSize(QSize(ui->btn_save_img_result->width()*0.5, ui->btn_save_img_result->height()*0.5));
+    ui->btn_view_eval_stats->setIcon(QIcon(":/icons/table.png"));
+    ui->btn_view_eval_stats->setToolTip("Show Result Table");
+    ui->btn_display_eval_results->setIconSize(QSize(ui->btn_display_eval_results->width()*0.5, ui->btn_display_eval_results->height()*0.5));
+    ui->btn_display_eval_results->setIcon(QIcon(":/icons/save.png"));
+    ui->btn_display_eval_results->setToolTip("Save Result Table");
+    ui->btn_display_eval_results->setIconSize(QSize(ui->btn_display_eval_results->width()*0.5, ui->btn_display_eval_results->height()*0.5));
     ui->lab_result_info->setText("There is no table to show.");
     ui->gridLayout->removeWidget(ui->Show_Res_Table);
     ui->gridLayout->addWidget(ui->Show_Res_Table, 0, 0, Qt::AlignRight);
@@ -182,7 +182,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     QSqlError err = m_db->InitialDBSetup();
     if(err.type() != QSqlError::NoError){
-        qDebug() << "Initial DB Setup failed";
+        qDebug() << "Initial DB Setup failed: " << err;
         m_db.reset();
     }
 }
@@ -374,9 +374,9 @@ void MainWindow::on_btn_show_img_result_clicked()
 {
     if (show_result_table) {    // Show -> Unshow
         show_result_table = false;
-        ui->btn_show_img_result->setIcon(QIcon(":/icons/table.png"));
-        ui->btn_show_img_result->setDefault(false);
-        ui->btn_show_img_result->setToolTip("Show Result Table");
+        ui->btn_view_eval_stats->setIcon(QIcon(":/icons/table.png"));
+        ui->btn_view_eval_stats->setDefault(false);
+        ui->btn_view_eval_stats->setToolTip("Show Result Table");
 
         ui->Show_Res_Table->hide();
 
@@ -385,9 +385,9 @@ void MainWindow::on_btn_show_img_result_clicked()
     }
     else {                      // Unshow -> Show
         show_result_table = true;
-        ui->btn_show_img_result->setIcon(QIcon(":/icons/untable.png"));
-        ui->btn_show_img_result->setDefault(true);
-        ui->btn_show_img_result->setToolTip("Unshow Result Table");
+        ui->btn_view_eval_stats->setIcon(QIcon(":/icons/untable.png"));
+        ui->btn_view_eval_stats->setDefault(true);
+        ui->btn_view_eval_stats->setToolTip("Unshow Result Table");
 
         ui->gridLayout->removeWidget(ui->Show_Res_Table);
         ui->Show_Res_Table->setMinimumWidth((int)(ui->Show->width()/2));
@@ -1757,6 +1757,8 @@ void MainWindow::on_rad_cam_rtmode_clicked()
 {
 //    ui->edit_cam_save_term->setEnabled(false);
 //    ui->lab_cam_save_term->setEnabled(false);
+    ui->rad_cam_autosave->setChecked(false);
+    ui->rad_cam_mansave->setChecked(false);
     cam_autosave_flag = false;
     cam_mansave_flag = false;
 }
@@ -1765,12 +1767,16 @@ void MainWindow::on_rad_cam_autosave_clicked()
 {
 //    ui->edit_cam_save_term->setEnabled(true);
 //    ui->lab_cam_save_term->setEnabled(true);
+    ui->rad_cam_mansave->setChecked(false);
+    ui->rad_cam_rtmode->setChecked(false);
     cam_autosave_flag = true;
     cam_mansave_flag = false;
 
 }
 
 void MainWindow::on_rad_cam_mansave_clicked(){
+    ui->rad_cam_autosave->setChecked(false);
+    ui->rad_cam_rtmode->setChecked(false);
     cam_mansave_flag = true;
     cam_autosave_flag = false;
 }
@@ -1914,18 +1920,7 @@ void MainWindow::on_btn_cam_play_clicked()
     if (m_timer.use_count() <= 0) { // First Connect with showResult()
         qDebug() << "CAM Mode) Play";
 
-        // Auto save mode
-        if(cam_autosave_flag){
-
-        }
-
-        // Manual save mode
-        else if(cam_mansave_flag){
-
-        }
-
-        // Realtime inference only mode
-        else{
+        if(ui->rad_cam_rtmode->isChecked()){
             if(m_save_timer.use_count() > 0){
                 m_save_timer.reset();
             }

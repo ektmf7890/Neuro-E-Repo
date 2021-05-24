@@ -29,14 +29,14 @@ QSqlError sqliteDB::InitialDBSetup(){
         return db.lastError();
     }
 
-    db = QSqlDatabase::addDatabase("QSLITE", DBConnectionName);
+    db = QSqlDatabase::addDatabase("QSQLITE", DBConnectionName);
     db.setDatabaseName(DBPath);
 
     QSqlError err;
 
     if(!db.open()){
         err = db.lastError();
-        QSqlDatabase::removeDatabase(DBConnectionName);
+        db.close();
         qDebug() << "Databse connection failed to open. Closing the database connection now.";
         return err;
     }
@@ -98,6 +98,8 @@ QSqlError sqliteDB::InitialDBSetup(){
             return q.lastError();
         }
     }
+
+    return QSqlError();
 }
 
 QSqlError sqliteDB::ConfirmDBConnection(){
