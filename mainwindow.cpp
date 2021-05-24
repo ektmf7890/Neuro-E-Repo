@@ -16,6 +16,9 @@ const string IMG_FORMAT = ".png";
 const string ORG_FOL = "org" + PathSeparator;
 const string PRED_FOL = "pred" + PathSeparator;
 
+const string VIDEO_TEXT = "Video File";
+const string CAMERA_TEXT = "Relatime Camera";
+
 // Database file
 static const char* nrtDBName = "neuroe.db";
 
@@ -135,14 +138,18 @@ MainWindow::MainWindow(QWidget *parent) :
     setCamControlEnabled(false);
 
     // CAM Select ComboBox
-    camType.append("USB CAM");
-    ui->com_cam_select->addItems(camType);
+    camType.append(QString::fromStdString(CAMERA_TEXT));
+    camType.append(QString::fromStdString(VIDEO_TEXT));
+    ui->com_cam_input_select->addItems(camType);
+    if(ui->com_cam_input_select->currentText().toStdString() == VIDEO_TEXT){
+        ui->btn_cam_select->setText("Select Video File");
+    }
+    else if(ui->com_cam_input_select->currentText().toStdString() == CAMERA_TEXT){
+        ui->btn_cam_select->setText("Select Camera");
+    }
 
     // CAM Save Style
     ui->rad_cam_rtmode->setChecked(true);
-    ui->edit_cam_save_term->setValidator(new QDoubleValidator(TERM_MIN, TERM_MAX, 1, this));
-    ui->edit_cam_save_term->setEnabled(false);
-    ui->lab_cam_save_term->setEnabled(false);
 
     // IMG Mode Style
     setImgShowTimeEditEnable(false);
@@ -174,6 +181,12 @@ MainWindow::MainWindow(QWidget *parent) :
     setModelInfo(false, "");
 
     ui->Cam_Save->hide();
+
+    QSqlError err = m_db->InitialDBSetup();
+    if(err.type() != QSqlError::NoError){
+        qDebug() << "Initial DB Setup failed";
+        m_db.reset();
+    }
 }
 
 MainWindow::~MainWindow()
@@ -196,24 +209,6 @@ void MainWindow::center_and_resize()
             QGuiApplication::screens().at(0)->geometry()
         )
     );
-}
-
-void MainWindow::sqliteDBSetup() {
-    if(m_nrtDB.use_count() > 0){
-        m_nrtDB.reset();
-    }
-    m_nrtDB = std::make_shared<neuroeDB>();
-
-    m_nrtDB->Open(nrtDBName);
-
-    m_nrtDB->CreateUserGroupTable();
-    m_nrtDB->CreateImageSetTable();
-    m_nrtDB->CreateModelTable();
-    m_nrtDB->CreateImagesTable();
-    m_nrtDB->CreateEvaluationSetTable();
-    m_nrtDB->CreateResultImagesTable();
-
-    m_nrtDB->Close();
 }
 
 void MainWindow::paintEvent(QPaintEvent *paintEvent)
@@ -239,7 +234,7 @@ void MainWindow::paintEvent(QPaintEvent *paintEvent)
 }
 
 void MainWindow::setCamSelectEnabled(bool flag) {
-    ui->com_cam_select->setEnabled(flag);
+    ui->com_cam_input_select->setEnabled(flag);
     ui->btn_cam_select->setEnabled(flag);
 }
 
@@ -251,43 +246,48 @@ void MainWindow::setCamControlEnabled(bool flag) {
 
 void MainWindow::setCamSaveEditEnabled(bool flag) {
     ui->rad_cam_rtmode->setEnabled(flag);
-    ui->rad_cam_savemode->setEnabled(flag);
-    ui->edit_cam_save_term->setEnabled(flag);
-    ui->edit_cam_save->setEnabled(flag);
-    ui->btn_cam_save->setEnabled(flag);
-    if (flag)
-        ui->edit_cam_save->setText("");
+    ui->rad_cam_autosave->setEnabled(flag);
+    ui->rad_cam_mansave->setEnabled(flag);
+//    ui->rad_cam_savemode->setEnabled(flag);
+//    ui->edit_cam_save_term->setEnabled(flag);
+//    ui->edit_cam_save->setEnabled(flag);
+//    ui->btn_cam_save->setEnabled(flag);
+//    if (flag)
+//        ui->edit_cam_save->setText("");
 }
 
 void MainWindow::setCamSaveChangeEnabled(bool flag) {  // Can be Changed Part when Paused
     ui->rad_cam_rtmode->setEnabled(flag);
-    ui->rad_cam_savemode->setEnabled(flag);
-    ui->edit_cam_save_term->setEnabled(flag);
-    if (flag) {
-        if (ui->edit_cam_save->text() == NULL) {
-            ui->edit_cam_save->setEnabled(flag);
-            ui->btn_cam_save->setEnabled(flag);
-        }
-    }
-    else {
-        ui->edit_cam_save->setEnabled(flag);
-        ui->btn_cam_save->setEnabled(flag);
-    }
+//    ui->rad_cam_savemode->setEnabled(flag);
+//    ui->edit_cam_save_term->setEnabled(flag);
+//    if (flag) {
+//        if (ui->edit_cam_save->text() == NULL) {
+//            ui->edit_cam_save->setEnabled(flag);
+//            ui->btn_cam_save->setEnabled(flag);
+//        }
+//    }
+//    else {
+//        ui->edit_cam_save->setEnabled(flag);
+//        ui->btn_cam_save->setEnabled(flag);
+//    }
 }
 
 bool MainWindow::checkCanSave() {
     QMessageBox *err_msg = new QMessageBox;
     err_msg->setFixedSize(600, 400);
-    if (ui->edit_cam_save->text() == NULL) {
-        err_msg->critical(0,"Error", "Please Choose Folder to be Saved.");
-        on_btn_cam_save_clicked();
-        return false;
-    }
-    if (ui->edit_cam_save_term->text() == NULL) {
-        err_msg->critical(0,"Error", "Please Input How Often(sec) will you Save Images.");
-        ui->edit_cam_save_term->setFocus();
-        return false;
-    }
+//    if (ui->edit_cam_save->text() == NULL) {
+//        err_msg->critical(0,"Error", "Please Choose Folder to be Saved.");
+//        on_btn_cam_save_clicked();
+//        return false;
+//    }
+//    if (ui->edit_cam_save_term->text() == NULL) {
+//        err_msg->critical(0,"Error", "Please Input How Often(sec) will you Save Images.");
+//        ui->edit_cam_save_term->setFocus();
+//        return false;
+//    }
+
+    // check if the save term is set
+    // check if the save path is set
     delete err_msg;
     return true;
 }
@@ -480,7 +480,8 @@ void MainWindow::resultVerClicked(int row) {
     }
 
     QString cur_img_name = ui->tableWidget_result->verticalHeaderItem(row)->text();
-    QString output_fol = (!mode_flag ? ui->edit_cam_save->text() : ui->edit_img_output->text());
+//    QString output_fol = (!mode_flag ? ui->edit_cam_save->text() : ui->edit_img_output->text());
+    QString output_fol = (!mode_flag ? "HAHA" : ui->edit_img_output->text());
     std::string cur_img_path = output_fol.toStdString() + PathSeparator + PRED_FOL + cur_img_name.toStdString();
     cv::Mat cur_img = cv::imread(cur_img_path, cv::IMREAD_COLOR);
     if (cur_img.empty())
@@ -491,25 +492,25 @@ void MainWindow::resultVerClicked(int row) {
     ui->lab_show_res->setPixmap(m_qpixmap.scaled(ui->lab_show_res->width(), ui->lab_show_res->height(), Qt::KeepAspectRatio));
 }
 
-void MainWindow::on_btn_save_img_result_clicked() {
-    QMessageBox *err_msg = new QMessageBox;
-    err_msg->setFixedSize(600, 400);
-    if (get_model_status() == nrt::STATUS_SUCCESS) {
-        if ((!mode_flag && cam_save_flag && !ui->edit_cam_save->text().isNull()) || (mode_flag && !ui->edit_img_output->text().isNull())) {
-            std::unique_lock<std::mutex> lock(m_save_info._mutex);
-            m_save_info.save_csv_flag = true;
-            return;
-        }
-        else {
-            err_msg->critical(0,"Error", "There is no output folder path.");
-            return;
-        }
-    }
-    else {
-        err_msg->critical(0,"Error", "There are no model and result table.");
-        return;
-    }
-}
+//void MainWindow::on_btn_save_img_result_clicked() {
+//    QMessageBox *err_msg = new QMessageBox;
+//    err_msg->setFixedSize(600, 400);
+//    if (get_model_status() == nrt::STATUS_SUCCESS) {
+//        if ((!mode_flag && cam_save_flag && !ui->edit_cam_save->text().isNull()) || (mode_flag && !ui->edit_img_output->text().isNull())) {
+//            std::unique_lock<std::mutex> lock(m_save_info._mutex);
+//            m_save_info.save_csv_flag = true;
+//            return;
+//        }
+//        else {
+//            err_msg->critical(0,"Error", "There is no output folder path.");
+//            return;
+//        }
+//    }
+//    else {
+//        err_msg->critical(0,"Error", "There are no model and result table.");
+//        return;
+//    }
+//}
 
 /*** Model Info Setting Method ***/
 
@@ -1042,7 +1043,8 @@ void MainWindow::save_worker() {
             QString model_name("");
             for (int m_n_i = 0; m_n_i < m_n_split.size()-1; m_n_i++)
                 model_name += m_n_split[m_n_i];
-            QString file_name = (!mode_flag ? ui->edit_cam_save->text() : ui->edit_img_output->text()) + QString::fromStdString(PathSeparator) + model_name + QString("_") + time_str + QString(".csv");
+//            QString file_name = (!mode_flag ? ui->edit_cam_save->text() : ui->edit_img_output->text()) + QString::fromStdString(PathSeparator) + model_name + QString("_") + time_str + QString(".csv");
+            QString file_name = "temp_name.csv";
             qDebug() << file_name;
 
             QFile m_csv(file_name);
@@ -1175,6 +1177,7 @@ void MainWindow::segSetResults(nrt::NDBuffer merged_pred_output, cv::Mat &PRED_I
         // Threshold by size
         nrt::NDBuffer bounding_rects;
         nrt::NDBuffer size_threshold_buf = get_model_size_threshold();
+
         if (size_threshold_buf.empty()) {
             size_threshold_buf = nrt::NDBuffer::zeros(nrt::Shape(get_model_class_num(), 3), nrt::DTYPE_INT32);
             int* thres_ptr = size_threshold_buf.get_at_ptr<int>();
@@ -1240,7 +1243,7 @@ void MainWindow::segSetResults(nrt::NDBuffer merged_pred_output, cv::Mat &PRED_I
         }
 
         vector<bool> exist_class(get_model_class_num());
-        // Class Color Pixel in Result Image
+        // Class Color Pixel in Result Image;
         unsigned char* output_ptr = merged_pred_output.get_at_ptr<unsigned char>(0);
         int img_h = PRED_IMG.rows;
         int img_w = PRED_IMG.cols;
@@ -1257,6 +1260,7 @@ void MainWindow::segSetResults(nrt::NDBuffer merged_pred_output, cv::Mat &PRED_I
                 }
                 exist_class[cur_class-1] = true;
                 seg_pixel_cnt[cur_class-1] += 1;
+
                 QColor cur_class_color = COLOR_VECTOR[cur_class-1];
                 cv::Vec3b pix = PRED_IMG.at<cv::Vec3b>(h, w);
                 pix[2] = (int)(((double)pix[2] * alp_src) + ((double)cur_class_color.red() * alp_mask));
@@ -1545,8 +1549,8 @@ void MainWindow::showResult() {
     int cur_mode = ui->Mode_Setting_Stack->currentIndex();
 
     if (cur_mode == 0) {  // CAM Mode
-        if (ui->com_cam_select->currentIndex() == 0) {  // USB Cam
-            // shared_ptr<UsbCam> m_usbCam;
+        if (ui->com_cam_input_select->currentText().toStdString() == CAMERA_TEXT) {
+            // Realtime Camera Mode
             if (!m_usbCam->isExist()) {
                 if(m_timer)
                     m_timer->stop();
@@ -1561,11 +1565,31 @@ void MainWindow::showResult() {
             }
 
             ORG_IMG = m_usbCam->m_frame.clone();
-            QString time_format = "yyMMdd_HHmmss_zzz";
-            QDateTime now = QDateTime::currentDateTime();
-            std::string time_str = now.toString(time_format).toStdString();
-            cur_img_name = QString::fromStdString(time_str + IMG_FORMAT);
         }
+
+        // Video Input Mode
+        else if (ui->com_cam_input_select->currentText().toStdString() == VIDEO_TEXT){
+            if(!m_videoInputCap.isOpened()){
+                qDebug() << "Video capture is not opened.";
+                return;
+            }
+            m_videoInputCap >> ORG_IMG;
+
+            if(ORG_IMG.empty()){
+                qDebug() << "Video is over!";
+                QMessageBox::information(this, "Notification", "The video is over.");
+                m_videoInputCap.release();
+                video_mode_flag = false;
+                on_btn_cam_pause_clicked();
+                return;
+            }
+
+        }
+
+        QString time_format = "yyMMdd_HHmmss_zzz";
+        QDateTime now = QDateTime::currentDateTime();
+        std::string time_str = now.toString(time_format).toStdString();
+        cur_img_name = QString::fromStdString(time_str + IMG_FORMAT);
     }
 
     else if (cur_mode == 1) {
@@ -1621,18 +1645,17 @@ void MainWindow::showResult() {
     nrt::NDBuffer merged_pred_output; //Segmentation
 //    nrt::NDBuffer merged_prob_output; //Segmentation
 
+    std::chrono::duration<double, std::milli> inf_time;
     qDebug() << "Show Result) Execute";
     QString model_type = get_model_type();
     if(get_model_status() == nrt::STATUS_SUCCESS && get_executor_status() == nrt::STATUS_SUCCESS && class_table_availbale){
         if(model_type == "Segmentation"){
+//            if(video_mode_flag && ORG_IMG.rows>1000 && ORG_IMG.cols>1000){
+//                cv::resize(ORG_IMG, ORG_IMG, cv::Size(), 0.5, 0.5);
+//            }
+
             nrt::NDBuffer img_buffer = get_img_buffer(ORG_IMG);
-            std::chrono::duration<double, std::milli> inf_time;
-//            vector<nrt::NDBuffer> output_vector = seg_execute(img_buffer);
             merged_pred_output = seg_execute(img_buffer, inf_time);
-            /*
-            merged_pred_output = output_vector[0];
-            merged_prob_output = output_vector[1];
-            */
             ui->edit_show_inf->setText(QString::number(inf_time.count(), 'f', 3));
         }
         else if(model_type == "Classification" || model_type == "Detection" || model_type == "OCR" || model_type == "Anomaly") {
@@ -1678,8 +1701,8 @@ void MainWindow::showResult() {
     pred_mwn.image = PRED_IMG.clone();
 
     if (cur_mode == 0) {        // CAM Mode
-        if (cur_save_flag) {
-            cur_save_flag = false;
+        if (cam_autosave_flag) {
+//            cur_save_flag = false;
             qDebug() << "CAM Mode) Push Mat to buffer";
             std::unique_lock<std::mutex> lock(m_save_info._mutex);
 
@@ -1734,18 +1757,24 @@ void MainWindow::showResult() {
 
 void MainWindow::on_rad_cam_rtmode_clicked()
 {
-    ui->Cam_Save->hide();
-    ui->edit_cam_save_term->setEnabled(false);
-    ui->lab_cam_save_term->setEnabled(false);
-    cam_save_flag = false;
+//    ui->edit_cam_save_term->setEnabled(false);
+//    ui->lab_cam_save_term->setEnabled(false);
+    cam_autosave_flag = false;
+    cam_mansave_flag = false;
 }
 
-void MainWindow::on_rad_cam_savemode_clicked()
+void MainWindow::on_rad_cam_autosave_clicked()
 {
-    ui->Cam_Save->show();
-    ui->edit_cam_save_term->setEnabled(true);
-    ui->lab_cam_save_term->setEnabled(true);
-    cam_save_flag = true;
+//    ui->edit_cam_save_term->setEnabled(true);
+//    ui->lab_cam_save_term->setEnabled(true);
+    cam_autosave_flag = true;
+    cam_mansave_flag = false;
+
+}
+
+void MainWindow::on_rad_cam_mansave_clicked(){
+    cam_mansave_flag = true;
+    cam_autosave_flag = false;
 }
 
 void MainWindow::on_chb_show_prediction_clicked()
@@ -1798,30 +1827,57 @@ void MainWindow::on_btn_img_mode_clicked()
 
 void MainWindow::on_btn_cam_select_clicked()
 {
-    if (ui->com_cam_select->currentIndex() == 0) {
-        if (m_timer.use_count() > 0)
-            m_timer.reset();
-        if (m_usbCam.use_count() > 0)
-            m_usbCam.reset();
+    if(m_timer.use_count() > 0)
+        m_timer.reset();
+    if(m_usbCam.use_count() > 0)
+        m_usbCam.reset();
 
+    // USB CAM
+    if (ui->com_cam_input_select->currentText().toStdString() == CAMERA_TEXT) {
         m_usbCam = std::make_shared<UsbCam>();
         m_usbCam->selectCam();
         if (!m_usbCam->isExist()) {
+            if(cam_mode_flag)
+                cam_mode_flag = false;
             return;
         }
-
-        // if both executor or model is created
-        /*if(get_model_status() == nrt::STATUS_SUCCESS && get_executor_status() == nrt::STATUS_SUCCESS){
-            showResult();
-            on_btn_cam_play_clicked();
-            setCamControlEnabled(true);
-        }
-        */
+        cam_mode_flag = true;
 
         showResult();
         setCamControlEnabled(true);
         on_btn_cam_play_clicked();
         ui->edit_show_inf->setText("");
+    }
+
+    // Video Input
+    else if (ui->com_cam_input_select->currentText() == "Video"){
+        if(m_videoInputCap.isOpened()){
+            m_videoInputCap.release();
+        }
+
+        // VideoCapture(const String& filename, int apiPreference = CAP_ANY);
+        QString video_filename = QFileDialog::getOpenFileName(this,
+                                                              tr("Select Input Video"),
+                                                              QDir::homePath(), tr(" (*.avi, *.mp4)"));
+        if(video_filename.isEmpty()){
+            QMessageBox::information(this, "Notification", "No video was selected");
+            return;
+        }
+
+        m_videoInputCap.open(video_filename.toStdString(), cv::CAP_ANY);
+        m_videoInputCap.set(cv::CAP_PROP_FPS, 30);
+
+        if(!m_videoInputCap.isOpened()){
+            qDebug() << "Failed to open the video file.";
+            if(video_mode_flag)
+                video_mode_flag = false;
+            return;
+        }
+        video_mode_flag = true;
+
+        showResult();
+        setCamControlEnabled(true);
+        on_btn_cam_play_clicked();
     }
 }
 
@@ -1838,75 +1894,64 @@ void MainWindow::on_btn_cam_save_clicked()
         QDir().mkdir(org_fol_path);
     if (!QDir(pred_fol_path).exists())
         QDir().mkdir(pred_fol_path);
-    ui->edit_cam_save->setText(savePath);
+//    ui->edit_cam_save->setText(savePath);
 }
 
 void MainWindow::on_btn_cam_play_clicked()
 {
     qDebug() << "come cam play";
-    if (m_usbCam.use_count() <= 0) { // Cam doesn't Exist
+
+    // Camera Mode
+    if (cam_mode_flag && m_usbCam.use_count() <= 0) {
+        qDebug() << "Cam mode but camera is not open.";
+        return;
+    }
+
+    // Video Input mode
+    if(video_mode_flag && !m_videoInputCap.isOpened()){
+        qDebug() << "Video mode but capture is not open.";
         return;
     }
 
     if (m_timer.use_count() <= 0) { // First Connect with showResult()
         qDebug() << "CAM Mode) Play";
-        if (cam_save_flag) {
-            if (!checkCanSave())
-                return;
 
-            double save_term = ui->edit_cam_save_term->text().toDouble();
-            string save_path = ui->edit_cam_save->text().toUtf8().constData();
-            qDebug() << "CAM Mode) Save Term:" << save_term << "  |  Save Path:" << QString::fromStdString(save_path);
-            {
-                std::unique_lock<std::mutex> lock(m_save_info._mutex);
-                m_save_info.save_path = save_path;
-            }
+        // Auto save mode
+        if(cam_autosave_flag){
 
-            string org_fol_path, pred_fol_path;
-            org_fol_path = save_path + PathSeparator + ORG_FOL;
-            pred_fol_path = save_path + PathSeparator + PRED_FOL;
-            if (mkdir(org_fol_path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1) {
-                if (errno == EEXIST)
-                    qDebug() << "CAM Mode) Orgin Folder Already Exist";
-                else
-                    qDebug() << "CAM Mode) Orgin Folder Create Error";
-            }
-            else
-                qDebug() << "CAM Mode) Orgin Folder Create";
-
-            if (mkdir(pred_fol_path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1) {
-                if (errno == EEXIST)
-                    qDebug() << "CAM Mode) Predict Folder Already Exist";
-                else
-                    qDebug() << "CAM Mode) Predict Folder Create Error";
-            }
-            else
-                qDebug() << "CAM Mode) Predict Folder Create";
-
-            if (m_save_timer.use_count() == 0)
-                m_save_timer = make_shared<QTimer>(this);
-            connect(m_save_timer.get(), SIGNAL(timeout()), this, SLOT(setSaveStautus()));
-            m_save_timer->setInterval(save_term * 1000);
-            m_save_timer->start();
         }
-        else {
-            if (m_save_timer.use_count() > 0)
+
+        // Manual save mode
+        else if(cam_mansave_flag){
+
+        }
+
+        // Realtime inference only mode
+        else{
+            if(m_save_timer.use_count() > 0){
                 m_save_timer.reset();
+            }
         }
+
         setCamSelectEnabled(false);
         setCamSaveEditEnabled(false);
 
         if (m_timer.use_count() == 0)
             m_timer = make_shared<QTimer>(this);
+
         connect(m_timer.get(), SIGNAL(timeout()), this, SLOT(showResult()));
+
         m_timer->setInterval(0);
         m_timer->start();
-        m_usbCam->playCam();
+
+        if(m_usbCam.use_count() >0 )
+            m_usbCam->playCam();
+
         setTabelColumn(true);
     }
     else {          // Already Connected
         qDebug() << "CAM Mode) Replay";
-        if (cam_save_flag) {
+        /*if (cam_save_flag) {
             if (!checkCanSave())
                 return;
             double save_term = ui->edit_cam_save_term->text().toDouble();
@@ -1946,11 +1991,12 @@ void MainWindow::on_btn_cam_play_clicked()
         else {
             if (m_save_timer.use_count() > 0)
                 m_save_timer.reset();
-        }
+        }*/
         setCamSaveChangeEnabled(false);
         m_timer->setInterval(0);
         m_timer->start();
-        m_usbCam->playCam();
+        if(cam_mode_flag)
+            m_usbCam->playCam();
     }
     ui->btn_img_mode->setEnabled(false);
 }
@@ -1962,7 +2008,9 @@ void MainWindow::on_btn_cam_pause_clicked()
     if (m_timer->isActive()) {
         qDebug() << "CAM Mode) Pause";
         m_timer->stop();
-        m_usbCam->pauseCam();
+        if(cam_mode_flag && m_usbCam->isExist())
+            m_usbCam->pauseCam();
+
     }
 
     if (m_save_timer.use_count() > 0)
@@ -1986,6 +2034,13 @@ void MainWindow::on_btn_cam_stop_clicked()
     if (m_usbCam.use_count() > 0) {
         qDebug() << "CAM Mode) Delete CAM";
         m_usbCam.reset();
+        cam_mode_flag = false;
+    }
+
+    if(m_videoInputCap.isOpened()){
+        qDebug() << "VIDEO Mode) Delete Video Capture";
+        m_videoInputCap.release();
+        video_mode_flag = false;
     }
 
     setCamSelectEnabled(true);
@@ -2413,4 +2468,13 @@ void MainWindow::on_spb_img_cur_idx_valueChanged(int cur_idx)
     QPixmap m_qpixmap = QPixmap::fromImage(m_qimage);
     ui->lab_show_res->setPixmap(m_qpixmap.scaled(ui->lab_show_res->width(), ui->lab_show_res->height(), Qt::KeepAspectRatio));
     ui->edit_img_name->setText(cur_img_name);
+}
+
+void MainWindow::on_com_cam_input_select_currentTextChanged(const QString &text){
+    if(text.toStdString() == VIDEO_TEXT){
+        ui->btn_cam_select->setText("Select Video File");
+    }
+    else if(text.toStdString() == CAMERA_TEXT){
+        ui->btn_cam_select->setText("Select Camera");
+    }
 }

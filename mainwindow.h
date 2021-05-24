@@ -2,12 +2,12 @@
 #define MAINWINDOW_H
 
 #include "shared_include.h"
+#include <sqlitedb.h>
 #include <nrtexe.h>
 #include <usbcam.h>
 #include <predict.h>
-#include <database.h>
-#include <experimental/filesystem>
-namespace fs = std::experimental::filesystem;
+
+#include <QSqlError>
 
 struct Mat_With_Name
 {
@@ -65,7 +65,7 @@ private slots:
     void setTabelColumn(bool flag);
     void resultItemClicked(int row, int col);
     void resultVerClicked(int row);
-    void on_btn_save_img_result_clicked();
+//    void on_btn_save_img_result_clicked();
     void setModelInfo(bool flag, QString model_name);
     void setClassTable(bool flag);
     void tableItemClicked(int row, int col);
@@ -87,7 +87,9 @@ private slots:
     void on_btn_cam_stop_clicked();
 
     void on_rad_cam_rtmode_clicked();
-    void on_rad_cam_savemode_clicked();
+    void on_rad_cam_autosave_clicked();
+    void on_rad_cam_mansave_clicked();
+
     void on_chb_show_prediction_clicked();
 
     void on_btn_select_model_clicked();
@@ -107,6 +109,8 @@ private slots:
     void on_spb_img_cur_idx_valueChanged(int arg1);
 
     void on_btn_show_prediction_clicked();
+
+    void on_com_cam_input_select_currentTextChanged(const QString& text);
 
     void claSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vector<std::string> &new_row);
     void segSetResults(nrt::NDBuffer merged_pred_output, cv::Mat &PRED_IMG, vector<std::string> &new_row);
@@ -128,8 +132,11 @@ private:
     std::shared_ptr<QString> m_input_path;
     std::shared_ptr<QString> m_output_path;
 
-    // SQLite database connection
-    std::shared_ptr<neuroeDB> m_nrtDB;
+    // Video Input Capture Object
+    cv::VideoCapture m_videoInputCap;
+
+    bool video_mode_flag = false;
+    bool cam_mode_flag = false;
 
     bool show_result_table = false;
     bool show_pred_flag = true;
@@ -137,7 +144,8 @@ private:
     bool mode_flag = false; // false: CAM Mode, true: IMG Mode
 
     bool cur_save_flag = false;  // true: push to buffer
-    bool cam_save_flag = false;  // false: Realtime, true: Save
+    bool cam_autosave_flag = false;  // false: Realtime, true: Save
+    bool cam_mansave_flag = false;
 
     QStringList inf_img_list;
     bool img_show_time_flag = false; // true: show each image in setted show time
@@ -150,6 +158,9 @@ private:
     bool macro_cam_flag = false;
 
     bool class_table_availbale = false;
+
+    // SQLite Databse class
+    std::shared_ptr<sqliteDB> m_db = std::make_shared<sqliteDB>();
 };
 
 #endif // MAINWINDOW_H

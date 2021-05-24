@@ -767,7 +767,7 @@
                         <number>15</number>
                        </property>
                        <item>
-                        <widget class="QComboBox" name="com_cam_select">
+                        <widget class="QComboBox" name="com_cam_input_select">
                          <property name="sizePolicy">
                           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                            <horstretch>7</horstretch>
@@ -785,7 +785,7 @@
                           </sizepolicy>
                          </property>
                          <property name="text">
-                          <string>Select Cam</string>
+                          <string/>
                          </property>
                         </widget>
                        </item>
@@ -800,7 +800,7 @@
                         <verstretch>1</verstretch>
                        </sizepolicy>
                       </property>
-                      <layout class="QHBoxLayout" name="horizontalLayout_15">
+                      <layout class="QVBoxLayout" name="verticalLayout_14">
                        <property name="spacing">
                         <number>10</number>
                        </property>
@@ -817,144 +817,96 @@
                         <number>0</number>
                        </property>
                        <item>
-                        <widget class="QRadioButton" name="rad_cam_rtmode">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                           <horstretch>3</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="text">
-                          <string>Realtime Mode</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QRadioButton" name="rad_cam_savemode">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                           <horstretch>2</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="text">
-                          <string>Save Mode</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLineEdit" name="edit_cam_save_term">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                           <horstretch>1</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLabel" name="lab_cam_save_term">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                           <horstretch>1</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="text">
-                          <string>sec</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <spacer name="spa_cam_option">
+                        <spacer name="verticalSpacer">
                          <property name="orientation">
-                          <enum>Qt::Horizontal</enum>
-                         </property>
-                         <property name="sizeType">
-                          <enum>QSizePolicy::Expanding</enum>
+                          <enum>Qt::Vertical</enum>
                          </property>
                          <property name="sizeHint" stdset="0">
                           <size>
-                           <width>40</width>
-                           <height>20</height>
+                           <width>20</width>
+                           <height>40</height>
                           </size>
                          </property>
                         </spacer>
                        </item>
                        <item>
-                        <widget class="QCheckBox" name="chb_show_prediction">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                           <horstretch>3</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="text">
-                          <string>Show Prediction</string>
-                         </property>
-                        </widget>
-                       </item>
-                      </layout>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QWidget" name="Cam_Save" native="true">
-                      <property name="sizePolicy">
-                       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                        <horstretch>0</horstretch>
-                        <verstretch>1</verstretch>
-                       </sizepolicy>
-                      </property>
-                      <layout class="QHBoxLayout" name="horizontalLayout_6">
-                       <property name="leftMargin">
-                        <number>30</number>
-                       </property>
-                       <property name="topMargin">
-                        <number>10</number>
-                       </property>
-                       <property name="rightMargin">
-                        <number>30</number>
-                       </property>
-                       <property name="bottomMargin">
-                        <number>10</number>
-                       </property>
-                       <item>
-                        <widget class="QLabel" name="lab_cam_save">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                           <horstretch>1</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="text">
-                          <string>Save Folder</string>
-                         </property>
-                         <property name="alignment">
-                          <set>Qt::AlignCenter</set>
-                         </property>
+                        <widget class="QWidget" name="Realtime_Mode" native="true">
+                         <layout class="QHBoxLayout" name="horizontalLayout_23">
+                          <property name="spacing">
+                           <number>6</number>
+                          </property>
+                          <property name="leftMargin">
+                           <number>9</number>
+                          </property>
+                          <property name="topMargin">
+                           <number>9</number>
+                          </property>
+                          <property name="rightMargin">
+                           <number>9</number>
+                          </property>
+                          <property name="bottomMargin">
+                           <number>9</number>
+                          </property>
+                          <item>
+                           <widget class="QRadioButton" name="rad_cam_rtmode">
+                            <property name="text">
+                             <string>Realtime Inference Only</string>
+                            </property>
+                           </widget>
+                          </item>
+                         </layout>
                         </widget>
                        </item>
                        <item>
-                        <widget class="QLineEdit" name="edit_cam_save">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                           <horstretch>6</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
+                        <widget class="QWidget" name="Auto_Save" native="true">
+                         <layout class="QHBoxLayout" name="horizontalLayout_15">
+                          <item>
+                           <widget class="QRadioButton" name="rad_cam_autosave">
+                            <property name="sizePolicy">
+                             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                              <horstretch>2</horstretch>
+                              <verstretch>0</verstretch>
+                             </sizepolicy>
+                            </property>
+                            <property name="text">
+                             <string>Auto Save Inference Results</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item>
+                           <widget class="QPushButton" name="btn_cam_save_settings">
+                            <property name="text">
+                             <string>Save Settings</string>
+                            </property>
+                           </widget>
+                          </item>
+                         </layout>
                         </widget>
                        </item>
                        <item>
-                        <widget class="QPushButton" name="btn_cam_save">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                           <horstretch>3</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="text">
-                          <string>Select Folder</string>
-                         </property>
+                        <widget class="QWidget" name="Manual_Save" native="true">
+                         <layout class="QHBoxLayout" name="horizontalLayout_6">
+                          <item>
+                           <widget class="QRadioButton" name="rad_cam_mansave">
+                            <property name="sizePolicy">
+                             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                              <horstretch>2</horstretch>
+                              <verstretch>0</verstretch>
+                             </sizepolicy>
+                            </property>
+                            <property name="text">
+                             <string>Manually Save Inference Results</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item>
+                           <widget class="QPushButton" name="btn_man_save_settings">
+                            <property name="text">
+                             <string>Save Settings</string>
+                            </property>
+                           </widget>
+                          </item>
+                         </layout>
                         </widget>
                        </item>
                       </layout>
@@ -1476,7 +1428,14 @@
                 <item>
                  <widget class="QPushButton" name="btn_select_model">
                   <property name="text">
-                   <string>Select</string>
+                   <string>Single Model</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="pushButton_2">
+                  <property name="text">
+                   <string>Ensmble</string>
                   </property>
                  </widget>
                 </item>
