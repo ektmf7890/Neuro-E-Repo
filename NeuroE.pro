@@ -48,12 +48,12 @@ RESOURCES += \
 FORMS += \
         mainwindow.ui
 
-INCLUDEPATH += D:\\opencv\build\include
+INCLUDEPATH += C:\\opencv\build\install\include
 
 INCLUDEPATH += D:\\nrt\include
 
-LIBS += -LD:\\opencv\build\x64\vc15\lib \
-        -lopencv_world452 \
+LIBS += -LC:\\opencv\build\install\x64\vc15\lib \
+#        -lopencv_world452 \
         -lopencv_world452d
 
 LIBS += -LD:\\nrt\lib\release \

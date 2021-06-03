@@ -43,15 +43,23 @@
 #include <QCollator>
 #include <QFile>
 #include <QIODevice>
+#include <QDateTime>
+#include <QtConcurrent/qtconcurrentrun.h>
+#include <QTime>
+#include <QUuid>
+#include <QInputDialog>
+#include <QSqlTableModel>
+#include <QFormLayout>
+#include <QDialogButtonBox>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
-#include <QDateTime>
-#include <QtConcurrent/qtconcurrentrun.h>
+#include <QJsonParseError>
 
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/videoio/registry.hpp>
 using namespace cv;
 
 //#include <pthread.h>

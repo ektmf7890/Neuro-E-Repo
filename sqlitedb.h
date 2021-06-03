@@ -13,6 +13,11 @@
 #include <QUuid>
 #include <QFile>
 
+QDir imagesDir = QDir("resources/images");
+QDir modelsDir = QDir("resources/models");
+QDir evaluationsDir = QDir("resources/evaluations");
+QDir resultImagesDir = QDir("resources/resultImages");
+
 const auto CREATE_TABLE_IMAGE_SETS = QLatin1String(
             R"(
             CREATE TABLE IF NOT EXISTS ImageSets(
@@ -108,18 +113,22 @@ public:
 public:
     QSqlDatabase db;
 
-    QString DBPath = QString("%1%2").arg(qApp->applicationDirPath()).arg("/neruore.db");
+    QString DBPath = QString("%1%2").arg(qApp->applicationDirPath()).arg("/neuore.db");
     QString DBConnectionName = "neuroeDB";
 
     QSqlError InitialDBSetup();
 
     QSqlError ConfirmDBConnection();
 
-    bool InsertImageSet(QString name);
-    bool InsertImage(QString srcImagePath, QString name, int height, int width, int imageSetID);
-    bool InsertModel(QString srcModelPath, QString name, QString type, QString platform, QString searchspace, QString inferencelevel);
-    QString InsertEvaluationSet(int imagesetID, int modelID);
-    QString InsertResultItem(int infTime, int imageID, int evaluationSetID, QString suffix);
+    int InsertImageSet(QString name);
+    int InsertImage(QString imagePath, QString name, int height, int width, int imageSetID);
+    int InsertModel(QString srcModelPath, QString name, QString type, QString platform, QString searchspace, QString inferencelevel);
+    int InsertEvaluationSet(int imagesetID, int modelID);
+    int InsertResultItem(QString resultImagePath, int imageID, int evaluationSetID);
+
+    QString getEvalutionJsonPath(int evaluationSetId);
+
+    int getEvaluationSetID(int imageSetId, int modelId);
 };
 
 #endif // SQLITEDB_H

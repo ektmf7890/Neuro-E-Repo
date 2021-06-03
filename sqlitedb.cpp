@@ -1,10 +1,5 @@
 ﻿#include "sqlitedb.h"
 
-QDir imagesDir = QDir("./resources/images");
-QDir modelsDir = QDir("./resources/models");
-QDir evaluationsDir = QDir("./resources/evaluations");
-QDir resultImagesDir = QDir("./resources/resultImages");
-
 sqliteDB::sqliteDB()
 {
     QStringList drivers = QSqlDatabase::drivers();
@@ -111,10 +106,10 @@ QSqlError sqliteDB::ConfirmDBConnection(){
         return QSqlError();
 }
 
-bool sqliteDB::InsertImageSet(QString name){
+int sqliteDB::InsertImageSet(QString name){
     if(ConfirmDBConnection().type() != QSqlError::NoError){
         qDebug() << "Failed to insert image set: " << name;
-        return false;
+        return -1;
     }
 
     qDebug() << "Loading image set: " << name;
@@ -132,16 +127,22 @@ bool sqliteDB::InsertImageSet(QString name){
 
     if(!q.exec()){
         qDebug() << "InsertImageSet) " << q.lastError().text();
-        return false;
+        return -1;
     }
 
-    return true;
+    QVariant id = q.lastInsertId();
+    if(id.canConvert(QMetaType::Int)){
+        return id.toInt();
+    }
+    else{
+        return -1;
+    }
 }
 
-bool sqliteDB::InsertImage(QString srcImagePath, QString name, int height, int width, int imageSetID){
+int sqliteDB::InsertImage(QString imagePath, QString name, int height, int width, int imageSetID){
     if(ConfirmDBConnection().type() != QSqlError::NoError){
         qDebug() << "Failed to insert image: " << name;
-        return false;
+        return -1;
     }
 
     qDebug() << "Loading image: " << name;
@@ -152,36 +153,36 @@ bool sqliteDB::InsertImage(QString srcImagePath, QString name, int height, int w
 
     QString createdOn = QDateTime::currentDateTime().toString("dd-MM-yyyy hh:mm:ss");
 
-    QUuid uID = QUuid::createUuid();
-    QString suffix = "." + srcImagePath.split(".").last();
-    QString newImagePath = imagesDir.absolutePath() + "/" + uID.toString() + suffix;
-
-    if(!QFile::exists(srcImagePath) || !QFile::exists(newImagePath)){
-        qDebug() << "InsertImage) Image paths are incorrect";
-        return false;
+    if(!QFile::exists(imagePath)){
+        qDebug() << "InsertImage) Image path is incorrect";
+        return -1;
     }
-
-    QFile::copy(srcImagePath, newImagePath);
 
     q.addBindValue(name);
     q.addBindValue(createdOn);
-    q.addBindValue(newImagePath);
+    q.addBindValue(imagePath);
     q.addBindValue(height);
     q.addBindValue(width);
     q.addBindValue(imageSetID);
 
     if(!q.exec()){
         qDebug() << "InsertImage) " << q.lastError().text();
-        return false;
+        return -1;
     }
 
-    return true;
+    QVariant id = q.lastInsertId();
+    if(id.canConvert(QMetaType::Int)){
+        return id.toInt();
+    }
+    else{
+        return -1;
+    }
 }
 
-bool sqliteDB::InsertModel(QString srcModelPath, QString name, QString type, QString platform, QString searchspace, QString inferencelevel){
+int sqliteDB::InsertModel(QString srcModelPath, QString name, QString type, QString platform, QString searchspace, QString inferencelevel){
     if(ConfirmDBConnection().type() != QSqlError::NoError){
         qDebug() << "Failed to insert model: " << name;
-        return false;
+        return -1;
     }
 
     qDebug() << "Loading model: " << name;
@@ -198,7 +199,7 @@ bool sqliteDB::InsertModel(QString srcModelPath, QString name, QString type, QSt
 
     if(!QFile::exists(srcModelPath) || !QFile::exists(newModelPath)){
         qDebug() << "InsertImage) Image paths are incorrect";
-        return false;
+        return -1;
     }
 
     QFile::copy(srcModelPath, newModelPath);
@@ -213,16 +214,22 @@ bool sqliteDB::InsertModel(QString srcModelPath, QString name, QString type, QSt
 
     if(!q.exec()){
         qDebug() << "InsertModel) " << q.lastError().text();
-        return false;
+        return -1;
     }
 
-    return true;
+    QVariant id = q.lastInsertId();
+    if(id.canConvert(QMetaType::Int)){
+        return id.toInt();
+    }
+    else{
+        return -1;
+    }
 }
 
-QString sqliteDB::InsertEvaluationSet(int imagesetID, int modelID){
+int sqliteDB::InsertEvaluationSet(int imagesetID, int modelID){
     if(ConfirmDBConnection().type() != QSqlError::NoError){
         qDebug() << "Failed to make evaluation set";
-        return "";
+        return -1;
     }
 
     qDebug() << "Making evaluation set.";
@@ -242,38 +249,84 @@ QString sqliteDB::InsertEvaluationSet(int imagesetID, int modelID){
 
     if(!q.exec()){
         qDebug() << "InsertEvaluationSet) " << q.lastError().text();
-        return "";
+        return -1;
     }
 
-    return evaluationJsonPath;
+    QVariant id = q.lastInsertId();
+    if(id.canConvert(QMetaType::Int)){
+        return id.toInt();
+    }
+    else{
+        return -1;
+    }
 }
 
-QString sqliteDB::InsertResultItem(int infTime, int imageID, int evaluationSetID, QString suffix){
+int sqliteDB::InsertResultItem(QString resultImagePath, int imageID, int evaluationSetID){
     if(ConfirmDBConnection().type() != QSqlError::NoError){
         qDebug() << "Failed to make result item";
-        return "";
+        return -1;
     }
-
-    qDebug() << "Making result item.";
 
     QSqlQuery q(QSqlDatabase::database(DBConnectionName));
 
     q.prepare(INSERT_RESULT_ITEM);
 
     QString createdOn = QDateTime::currentDateTime().toString("dd-MM-yyyy hh:mm:ss");
-    QUuid uID = QUuid::createUuid();
-    QString resultImagePath = resultImagesDir.absolutePath() + "/" + uID.toString() + suffix;
 
     q.addBindValue(createdOn);
-    q.addBindValue(infTime);
     q.addBindValue(imageID); // which image of the image set
     q.addBindValue(evaluationSetID); // image set & model information
     q.addBindValue(resultImagePath);
 
     if(!q.exec()){
         qDebug() << "InsertResultItem) " << q.lastError().text();
+        return -1;
+    }
+
+    QVariant id = q.lastInsertId();
+    if(id.canConvert(QMetaType::Int)){
+        return id.toInt();
+    }
+    else{
+        return -1;
+    }
+}
+
+QString sqliteDB::getEvalutionJsonPath(int evaluationSetId){
+    if(ConfirmDBConnection().type() != QSqlError::NoError){
+        qDebug() << "getEvaluationJsonPath) DB Connection Failed.";
         return "";
     }
 
-    return resultImagePath;
+    QSqlQuery q(QSqlDatabase::database(DBConnectionName));
+
+    q.prepare("SELECT EvaluationJsonPath FROM EvaluationSets WHERE Id=?");
+    q.addBindValue(evaluationSetId);
+
+    while(q.next()){
+        QString evaluationJsonPath = q.value(0).toString();
+        return evaluationJsonPath;
+    }
+
+    return "";
+}
+
+int sqliteDB::getEvaluationSetID(int imageSetId, int modelId){
+    if(ConfirmDBConnection().type() != QSqlError::NoError){
+        qDebug() << "evaluationSetExists) DB Connection Failed.";
+        return -1;
+    }
+
+    QSqlQuery q(QSqlDatabase::database(DBConnectionName));
+
+    q.prepare("SELECT Id FROM EvaluationSets WHERE ImageSetId=? AND ModelId=?");
+    q.addBindValue(imageSetId);
+    q.addBindValue(modelId);
+
+    while(q.next()){
+        int id = q.value(0).toInt();
+        return id;
+    }
+
+    return -1;
 }

@@ -25,12 +25,17 @@ struct Share_Mat
     std::queue<Mat_With_Name> mask_buffer;    // SEG
     std::queue<Mat_With_Name> pred_buffer;    // CLA, SEG, DET, OCR, ANO
 
-    QFile json_file;
-
     std::queue<vector<std::string>> row_buffer;
     bool save_csv_flag;
 
     string save_path;
+
+    //ImageSetId for inserting Image row
+    int imageSetId;
+    //EvaluationSetId for inserting ResultItems row
+    int evaluationSetId;
+    // Evaluation json file
+    QJsonObject evaluation_json;
 };
 
 namespace Ui {
@@ -118,11 +123,13 @@ private slots:
     void ocrSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vector<std::string> &new_row);
     void anomSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vector<std::string> &new_row);
 
+    bool configSaveSettings();
+
 private:
     Ui::MainWindow *ui;
     QStringList camType;
     shared_ptr<QTimer> m_timer; // executes showResult at given time interval
-    shared_ptr<QTimer> m_save_timer = std::make_shared<QTimer>(this); // executer setSaveStatus at given time interval
+    shared_ptr<QTimer> m_save_timer = std::make_shared<QTimer>(this); // executes setSaveStatus at given time interval
 
     // QFutureWatcher & QFuture for executor creating thread
     std::shared_ptr<QFutureWatcher<QString>> futureWatcher = std::make_shared<QFutureWatcher<QString>>(this);
@@ -134,6 +141,9 @@ private:
 
     // Video Input Capture Object
     cv::VideoCapture m_videoInputCap;
+    QString video_filename;
+    int frameRate = 30;
+//    QTime lastFrameExtractedTime;
 
     bool video_mode_flag = false;
     bool cam_mode_flag = false;

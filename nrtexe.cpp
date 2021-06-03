@@ -54,6 +54,10 @@ QString get_gpu_name() {
 }
 
 QString set_model(QString modelPath, bool fp16_flag) {
+    // Load Model File
+    if (m_model_ptr.use_count() > 0)
+        m_model_ptr.reset();
+
     // QString to wchar_t*
     wchar_t mModelPath[512];
     modelPath.toWCharArray(mModelPath);
@@ -61,9 +65,6 @@ QString set_model(QString modelPath, bool fp16_flag) {
 
     const wchar_t* m_modelPath = modelPath.toStdWString().c_str();
 
-    // Load Model File
-    if (m_model_ptr.use_count() > 0)
-        m_model_ptr.reset();
     m_model_ptr = make_shared<nrt::Model>(mModelPath);
 
     if (m_model_ptr->get_status() != nrt::STATUS_SUCCESS) {
@@ -139,6 +140,8 @@ QString set_model(QString modelPath, bool fp16_flag) {
         return QString("");
     }
     qDebug() << "NRT) Executor Created";
+
+    saveModel();
 
     return modelPath;
 }

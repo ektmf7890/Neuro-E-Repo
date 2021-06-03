@@ -19,12 +19,10 @@ const string PRED_FOL = "pred" + PathSeparator;
 const string VIDEO_TEXT = "Video File";
 const string CAMERA_TEXT = "Relatime Camera";
 
-// Database file
-static const char* nrtDBName = "neuroe.db";
-
 QVector<QColor> COLOR_VECTOR;
 
 extern int PROB_IDX, PRED_IDX, CAM_IDX, ANO_IDX;
+int currentModelId = -1;
 
 int COLOR_COL = 0, NAME_COL = 1, PROB_THRES_COL = 5, WIDTH_COL = 2, HEIGHT_COL = 4, AND_OR_COL = 3;
 cv::Scalar red(0, 0, 255);
@@ -150,6 +148,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // CAM Save Style
     ui->rad_cam_rtmode->setChecked(true);
+    ui->rad_cam_autosave->setToolTip("Auto save option is avavilable only when model is loaded.");
+    ui->rad_cam_mansave->setToolTip("Maual Save option is avavilable only when model is loaded.");
 
     // IMG Mode Style
     setImgShowTimeEditEnable(false);
@@ -966,50 +966,65 @@ void MainWindow::tableItemChanged(int row, int col) {
 void MainWindow::save_worker() {
     while (1) {
         std::unique_lock<std::mutex> lock(m_save_info._mutex);
-        // Save Work
+
         Mat_With_Name org_mwn, pred_mwn;
-        std::string save_path = m_save_info.save_path;
-        std::string org_path, pred_path;
         vector<std::string> new_row;
 
-        if (!m_save_info.org_buffer.empty()) {
+        // insert new row in Images table
+        int imageId;
+        if(!m_save_info.org_buffer.empty()){
             org_mwn = m_save_info.org_buffer.front();
             m_save_info.org_buffer.pop();
 
-            org_path = save_path + PathSeparator + ORG_FOL + org_mwn.name;
+            QUuid u_id = QUuid::createUuid();
+            QString org_file_uid = u_id.toString().remove(QChar('{')).remove(QChar('}')) + QString(IMG_FORMAT.c_str());
+            QString org_path = imagesDir.absoluteFilePath(org_file_uid);
 
-            std::string::size_type pos = 0;
-            while (pos != std::string::npos) {
-                pos = org_mwn.name.find(PathSeparator, pos+1);
-                QString new_fol_path = QString::fromStdString(save_path + PathSeparator + ORG_FOL +org_mwn.name.substr(0, pos+1));
-                if (!QDir(new_fol_path).exists()) {
-                    qDebug() << "Save Thread) Make Folder: [" << new_fol_path << "]";
-                    QDir().mkdir(new_fol_path);
-                }
+            QString org_image_name = QString(org_mwn.name.c_str());
+
+            cv::cvtColor(org_mwn.image, org_mwn.image, cv::COLOR_RGB2BGR);
+            cv::imwrite(org_path.toStdString(), org_mwn.image);
+
+            qDebug() << "Save thread) Saving image " << org_mwn.name.c_str();
+
+            // insert row in database 'Images' table
+            imageId = m_db->InsertImage(org_path, org_image_name, org_mwn.image.rows, org_mwn.image.cols, m_save_info.imageSetId);
+            if(imageId == -1){
+                qDebug() << "Save thread) Got invalid ImageId.";
+                return;
             }
-
-            cv::cvtColor(org_mwn.image, org_mwn.image, COLOR_RGB2BGR);
-            cv::imwrite(org_path, org_mwn.image);
-            qDebug() << "Save Thread)" << "[Save Complete]" << QString::fromStdString(org_path);
         }
 
-        if (!m_save_info.pred_buffer.empty()) {
+        // insert new row in ResultItem table
+        int resultItemID;
+        if(!m_save_info.pred_buffer.empty()){
             pred_mwn = m_save_info.pred_buffer.front();
             m_save_info.pred_buffer.pop();
-            pred_path = save_path + PathSeparator + PRED_FOL + pred_mwn.name;
-            std::string::size_type pos = 0;
-            while (pos != std::string::npos) {
-                pos = pred_mwn.name.find(PathSeparator, pos+1);
-                QString new_fol_path = QString::fromStdString(save_path + PathSeparator + PRED_FOL + pred_mwn.name.substr(0, pos+1));
-                if (!QDir(new_fol_path).exists()) {
-                    qDebug() << "Save Thread) Make Folder: [" << new_fol_path << "]";
-                    QDir().mkdir(new_fol_path);
-                }
-            }
 
-            cv::cvtColor(pred_mwn.image, pred_mwn.image, COLOR_RGB2BGR);
-            cv::imwrite(pred_path, pred_mwn.image);
-            qDebug() << "Save Thread)" << "[Save Complete]" << QString::fromStdString(pred_path);
+            QUuid u_id = QUuid::createUuid();
+            QString pred_file_uid = u_id.toString().remove(QChar('{')).remove(QChar('}')) + QString(IMG_FORMAT.c_str());
+            QString pred_path = resultImagesDir.absoluteFilePath(pred_file_uid);
+
+            QString pred_image_name = QString(pred_mwn.name.c_str());
+
+            cv::cvtColor(pred_mwn.image, pred_mwn.image, cv::COLOR_RGB2BGR);
+            cv::imwrite(pred_path.toStdString(), pred_mwn.image);
+
+            qDebug() << "Save thread) Saving image " << pred_mwn.name.c_str();
+
+            // insert row in database 'ResultItems' table
+            resultItemID = m_db->InsertResultItem(pred_path, imageId, m_save_info.evaluationSetId);
+
+        }
+
+        // append to m_save_info.evaluation_json
+        // when the evaluation is done, the evaluation_json will be saved.
+        if(!m_save_info.row_buffer.empty()){
+            new_row = m_save_info.row_buffer.front();
+
+            // String 벡터 new_row에 있는 값들을 파싱해서 Evaluation Json에 추가.
+            // Model type 별로 저장되는 형식이 다를 것이며, 이는 Nrt api 참고하여 유사한 형식으로 하는 것이 좋을 듯.
+            // show result 함수에서 각 모델 타입마다 new_row에 저장되는 내용 조정 필요.
         }
 
         if (!m_save_info.row_buffer.empty()) {
@@ -1538,7 +1553,6 @@ void MainWindow::anomSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, ve
 void MainWindow::showResult() {
     cv::Mat ORG_IMG, PRED_IMG;
     QString cur_inf_img_path; // current inference image path
-    int pre_idx;
 
     // save csv table
     vector<std::string> new_row;
@@ -1700,7 +1714,7 @@ void MainWindow::showResult() {
 
     if (cur_mode == 0) {        // CAM Mode
         if (cam_autosave_flag) {
-//            cur_save_flag = false;
+            cur_save_flag = false;
             qDebug() << "CAM Mode) Push Mat to buffer";
             std::unique_lock<std::mutex> lock(m_save_info._mutex);
 
@@ -1753,10 +1767,137 @@ void MainWindow::showResult() {
     ui->lab_show_res->setPixmap(m_qpixmap.scaled(ui->lab_show_res->width(), ui->lab_show_res->height(), Qt::KeepAspectRatio));
 }
 
+bool MainWindow::configSaveSettings(){
+    // Setting up Cam Save Configuration
+    int imageSetId = -1, evaluationSetId;
+    bool newImagesetFlag;
+
+    QSqlTableModel* imageSetTableModel = new QSqlTableModel;
+    imageSetTableModel->setTable("ImageSets");
+    imageSetTableModel->select();
+    imageSetTableModel->setHeaderData(0, Qt::Horizontal, "Name");
+    imageSetTableModel->setHeaderData(1, Qt::Horizontal, "Created On");
+    imageSetTableModel->setHeaderData(2, Qt::Horizontal, "Updated On");
+    imageSetTableModel->setHeaderData(3, Qt::Horizontal, "Number of Images");
+
+    QTableView* view = new QTableView;
+    view->setModel(imageSetTableModel);
+    view->setWindowTitle("Save Settings");
+    view->hideColumn(0);
+    view->setSelectionBehavior(QAbstractItemView::SelectRows);
+    view->setSelectionMode(QAbstractItemView::SingleSelection);
+
+    QDialog dialog(this);
+
+    QHBoxLayout* hbox = new QHBoxLayout;
+
+    QFormLayout* modelform = new QFormLayout;
+    modelform->addRow(new QLabel("Selected Model Info (exit the dialog to re-select model)"));
+    modelform->addRow(new QLabel("Model Name: "), new QLabel("Dummy"));
+    modelform->addRow(new QLabel("Model Type: "), new QLabel("Dummy"));
+    hbox->addLayout(modelform);
+    hbox->addSpacing(10);
+
+    QGroupBox* groupbox = new QGroupBox;
+    QRadioButton* newImageset = new QRadioButton;
+    newImageset->setText("Create New Image Set to Save to.");
+    newImageset->setChecked(true);
+    newImagesetFlag = true;
+    QRadioButton* existingImageset = new QRadioButton;
+    existingImageset->setText("Select Existing Image Set to Save to.");
+    QVBoxLayout *vbox = new QVBoxLayout;
+    vbox->addWidget(newImageset);
+    vbox->addWidget(existingImageset);
+    vbox->addStretch(1);
+    groupbox->setLayout(vbox);
+    hbox->addWidget(groupbox);
+
+    hbox->addWidget(view);
+
+    QDialogButtonBox*btnbox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
+                                                   Qt::Horizontal, &dialog);
+    connect(btnbox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+    connect(btnbox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+    hbox->addWidget(btnbox);
+    dialog.setLayout(hbox);
+
+    if(dialog.exec() == QDialog::Accepted){
+        if(existingImageset->isChecked()){
+            int rowID = view->selectionModel()->currentIndex().row();
+            imageSetId = view->model()->index(rowID, 0).data().toInt();
+            newImagesetFlag = false;
+        }
+        else if (newImageset->isChecked()){
+            newImagesetFlag = true;
+        }
+    }
+    else{
+        ui->rad_cam_autosave->setChecked(false);
+        return false;
+    }
+
+    ui->rad_cam_mansave->setChecked(false);
+    ui->rad_cam_rtmode->setChecked(false);
+    cam_autosave_flag = true;
+    cam_mansave_flag = false;
+
+    if(m_db->ConfirmDBConnection().type() != QSqlError::NoError){
+       return false;
+    }
+
+    if(newImagesetFlag){
+        QString imageSetName;
+        if(video_mode_flag){
+            imageSetName = "VIDEO_" + video_filename + "_ImageSet";
+        }
+        else if(cam_mode_flag){
+            imageSetName = "CAM_" + QDateTime::currentDateTime().toString("dd-MM-yyyy hh:mm:ss") + "_ImageSet";
+        }
+        else{
+            return false;
+        }
+
+        bool ok;
+        QString userInput = QInputDialog::getText(this, "Image Set Name",
+                                                  "Image Set Name", QLineEdit::Normal,
+                                                  imageSetName, &ok);
+        if(ok && !userInput.isEmpty()){
+            imageSetName = userInput;
+        }
+
+        imageSetId = m_db->InsertImageSet(imageSetName);
+        if(imageSetId == -1){
+            qDebug() << "Image set insert failed";
+            return false;
+        }
+    }
+
+    evaluationSetId = m_db->getEvaluationSetID(imageSetId, currentModelId);
+    if(evaluationSetId == -1){
+        evaluationSetId = m_db->InsertEvaluationSet(imageSetId, currentModelId);
+        if(evaluationSetId == -1){
+            qDebug() << "Evaluation set insert failed";
+            return false;
+        }
+    }
+
+    {
+        std::unique_lock<std::mutex> lock(m_save_info._mutex);
+        m_save_info.imageSetId = imageSetId;
+        m_save_info.evaluationSetId = evaluationSetId;
+        QJsonObject& json = m_save_info.evaluation_json;
+
+        json = QJsonObject();
+    }
+    return true;
+}
+
 void MainWindow::on_rad_cam_rtmode_clicked()
 {
-//    ui->edit_cam_save_term->setEnabled(false);
-//    ui->lab_cam_save_term->setEnabled(false);
+    if(!ui->rad_cam_rtmode->isChecked()){
+        ui->rad_cam_rtmode->setChecked(true);
+        return;
+    }
     ui->rad_cam_autosave->setChecked(false);
     ui->rad_cam_mansave->setChecked(false);
     cam_autosave_flag = false;
@@ -1765,16 +1906,47 @@ void MainWindow::on_rad_cam_rtmode_clicked()
 
 void MainWindow::on_rad_cam_autosave_clicked()
 {
-//    ui->edit_cam_save_term->setEnabled(true);
-//    ui->lab_cam_save_term->setEnabled(true);
-    ui->rad_cam_mansave->setChecked(false);
-    ui->rad_cam_rtmode->setChecked(false);
-    cam_autosave_flag = true;
-    cam_mansave_flag = false;
+    if(!ui->rad_cam_autosave->isChecked()){
+        ui->rad_cam_autosave->setChecked(true);
+        return;
+    }
 
+    // 모델이 로드 되어있지 않으면 선택할 수 없게 막음.
+    if(get_model_status() == -1) {
+        ui->rad_cam_autosave->setChecked(false);
+        QMessageBox msgbox;
+        msgbox.setText("You can not select save mode when model is not loaded.");
+        msgbox.exec();
+        return;
+    }
+
+    if(configSaveSettings()){
+        ui->rad_cam_rtmode->setChecked(false);
+        ui->rad_cam_mansave->setChecked(false);
+        cam_autosave_flag = true;
+        cam_mansave_flag = false;
+    }
+    else{
+        ui->rad_cam_autosave->setChecked(false);
+        return;
+    }
 }
 
 void MainWindow::on_rad_cam_mansave_clicked(){
+    if(!ui->rad_cam_mansave->isChecked()){
+        ui->rad_cam_mansave->setChecked(true);
+        return;
+    }
+
+    // 모델이 로드 되어있지 않으면 선택할 수 없게 막음.
+    if(get_model_status() == -1) {
+        ui->rad_cam_mansave->setChecked(false);
+        QMessageBox msgbox;
+        msgbox.setText("You can not select save mode when model is not loaded.");
+        msgbox.exec();
+        return;
+    }
+
     ui->rad_cam_autosave->setChecked(false);
     ui->rad_cam_rtmode->setChecked(false);
     cam_mansave_flag = true;
@@ -1854,22 +2026,23 @@ void MainWindow::on_btn_cam_select_clicked()
     }
 
     // Video Input
-    else if (ui->com_cam_input_select->currentText() == "Video"){
+    else if (ui->com_cam_input_select->currentText().toStdString() == VIDEO_TEXT){
         if(m_videoInputCap.isOpened()){
             m_videoInputCap.release();
         }
 
-        // VideoCapture(const String& filename, int apiPreference = CAP_ANY);
-        QString video_filename = QFileDialog::getOpenFileName(this,
+        QString video_filepath = QFileDialog::getOpenFileName(this,
                                                               tr("Select Input Video"),
                                                               QDir::homePath(), tr(" (*.avi, *.mp4)"));
-        if(video_filename.isEmpty()){
+        if(video_filepath.isEmpty()){
             QMessageBox::information(this, "Notification", "No video was selected");
             return;
         }
 
-        m_videoInputCap.open(video_filename.toStdString(), cv::CAP_ANY);
-        m_videoInputCap.set(cv::CAP_PROP_FPS, 30);
+        video_filename = video_filepath.split('/').last();
+        video_filepath = QDir::toNativeSeparators(video_filepath);
+
+        m_videoInputCap.open(video_filepath.toStdString(), cv::CAP_MSMF);
 
         if(!m_videoInputCap.isOpened()){
             qDebug() << "Failed to open the video file.";
@@ -1877,6 +2050,21 @@ void MainWindow::on_btn_cam_select_clicked()
                 video_mode_flag = false;
             return;
         }
+        bool ok;
+        int fps = QInputDialog::getInt(this, "Select Video Frame Rate",
+                                       "FPS (0 < fps <= 100): ", 10, 1, 100, 10, &ok);
+        if(ok){
+            frameRate = fps;
+            qDebug() << "Frame Rate: " << QString::number(fps);
+        }
+        else{
+            frameRate = 10;
+            qDebug() << "Frame Rate: " << QString::number(fps);
+            return;
+        }
+
+        //        m_videoInputCap.set(cv::CAP_PROP_FPS, fps);
+
         video_mode_flag = true;
 
         showResult();
@@ -1924,6 +2112,22 @@ void MainWindow::on_btn_cam_play_clicked()
             if(m_save_timer.use_count() > 0){
                 m_save_timer.reset();
             }
+            ui->rad_cam_autosave->setEnabled(false);
+            ui->rad_cam_mansave->setEnabled(false);
+        }
+        else if(ui->rad_cam_autosave->isChecked()){
+            if (m_save_timer.use_count() == 0)
+                m_save_timer = make_shared<QTimer>(this);
+            connect(m_save_timer.get(), SIGNAL(timeout()), this, SLOT(setSaveStautus()));
+            m_save_timer->setInterval(1000);
+            m_save_timer->start();
+
+            ui->rad_cam_mansave->setEnabled(false);
+            ui->rad_cam_rtmode->setEnabled(false);
+        }
+        else if(ui->rad_cam_mansave->isChecked()){
+            ui->rad_cam_rtmode->setEnabled(false);
+            ui->rad_cam_autosave->setEnabled(false);
         }
 
         setCamSelectEnabled(false);
@@ -1944,54 +2148,28 @@ void MainWindow::on_btn_cam_play_clicked()
     }
     else {          // Already Connected
         qDebug() << "CAM Mode) Replay";
-        /*if (cam_save_flag) {
-            if (!checkCanSave())
-                return;
-            double save_term = ui->edit_cam_save_term->text().toDouble();
-            string save_path = ui->edit_cam_save->text().toUtf8().constData();
-            qDebug() << "CAM Mode) Save Term:" << save_term << "  |  Save Path:" << QString::fromStdString(save_path);
-            {
-                std::unique_lock<std::mutex> lock(m_save_info._mutex);
-                m_save_info.save_path = save_path;
-            }
 
-            string org_fol_path, pred_fol_path;
-            org_fol_path = save_path + PathSeparator + ORG_FOL;
-            pred_fol_path = save_path + PathSeparator + PRED_FOL;
-            if (mkdir(org_fol_path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1) {
-                if (errno == EEXIST) {
-                    qDebug() << "CAM Mode) Orgin Folder Already Exist";
-                }
-                else {
-                    qDebug() << "CAM Mode) Orgin Folder Create Error";
-                }
-            }
-            if (mkdir(pred_fol_path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1) {
-                if (errno == EEXIST) {
-                    qDebug() << "CAM Mode) Predict Folder Already Exist";
-                }
-                else {
-                    qDebug() << "CAM Mode) Predict Folder Create Error";
-                }
-            }
-
+        if(ui->rad_cam_rtmode->isChecked()){
+            if (m_save_timer.use_count() > 0)
+                m_save_timer.reset();
+        }
+        else if (ui->rad_cam_autosave->isChecked()) {
             if (m_save_timer.use_count() == 0)
                 m_save_timer = make_shared<QTimer>(this);
             connect(m_save_timer.get(), SIGNAL(timeout()), this, SLOT(setSaveStautus()));
-            m_save_timer->setInterval(save_term * 1000);
+            m_save_timer->setInterval(1000);
             m_save_timer->start();
         }
-        else {
-            if (m_save_timer.use_count() > 0)
-                m_save_timer.reset();
-        }*/
+
         setCamSaveChangeEnabled(false);
         m_timer->setInterval(0);
         m_timer->start();
+
         if(cam_mode_flag)
             m_usbCam->playCam();
     }
     ui->btn_img_mode->setEnabled(false);
+    ui->btn_select_model->setEnabled(false);
 }
 
 void MainWindow::on_btn_cam_pause_clicked()
@@ -2060,6 +2238,11 @@ void MainWindow::on_btn_cam_stop_clicked()
             }
         }
     }
+
+    ui->rad_cam_autosave->setEnabled(true);
+    ui->rad_cam_mansave->setEnabled(true);
+    ui->rad_cam_rtmode->setEnabled(true);
+    ui->btn_select_model->setEnabled(true);
 }
 
 void MainWindow::on_btn_select_model_clicked()
@@ -2088,9 +2271,13 @@ void MainWindow::set_model_started(){
     if ( ui->Model_Proper->currentIndex() == 0){ // Info Page -> Status Page
         ui->Model_Proper->setCurrentWidget(ui->Model_Status_Page);
     }
+
     if(class_table_availbale == true){
         class_table_availbale = false;
     }
+
+    ui->rad_cam_autosave->setEnabled(false);
+    ui->rad_cam_mansave->setEnabled(false);
 
     ui->lab_model_status->setText("Loading Model...\nIt may take a few seconds...");
     ui->btn_select_model->setEnabled(false);
@@ -2117,6 +2304,15 @@ void MainWindow::set_model_completed(){
 
         //setTabelColumn(true);
         setModelInfo(true, model_name);
+
+        // Insert the model row in 'Models' table and reserve the ModelId.
+        int modelId = m_db->InsertModel(modelPath, get_model_name(), get_model_type(), get_model_training_type(), get_model_search_level(), get_model_inference_level());
+        if(modelId == -1){
+            qDebug() << "Model did not get saved in db correctly.";
+            currentModelId = -1;
+            return;
+        }
+        currentModelId = modelId;
     }
     else {
         qDebug() << "NRT) Set Model Failed!";
@@ -2126,11 +2322,15 @@ void MainWindow::set_model_completed(){
         messageBox.setFixedSize(500,200);
 
         ui->lab_model_status->setText("Please Select Model.");
+
+        currentModelId = -1;
     }
 
     ui->btn_select_model->setEnabled(true);
     ui->btn_select_gpu->setEnabled(true);
     ui->cbx_select_fp16->setEnabled(true);
+
+    return;
 }
 
 void MainWindow::on_btn_select_gpu_clicked()

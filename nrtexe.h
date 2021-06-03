@@ -3,6 +3,7 @@
 
 #include "shared_include.h"
 #include <nrt.h>
+#include <sqlitedb.h>
 
 struct BoundingBox {
     int batch_index;
@@ -57,5 +58,7 @@ bool is_model_patch_mode();
 int get_executor_status();
 
 nrt::NDBufferList execute(nrt::NDBuffer resized_img_buffer);
+
+int saveModel();
 
 #endif // NRTEXE_H

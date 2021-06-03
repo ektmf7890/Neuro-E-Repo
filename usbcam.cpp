@@ -161,11 +161,10 @@ void UsbCam::selectCam() {
 // videoIdx: GStreamer pipeline stream?
 void UsbCam::setVideoCapture(int videoIdx) {
     // NEED DEVELOP //
-    //cv::VideoCaptureAPIs videoCapAPI = cv::CAP_ANY;
-    cv::VideoCaptureAPIs videoCapAPI = cv::CAP_V4L2;
+//    cv::VideoCaptureAPIs videoCapAPI = cv::CAP_ANY;
+//    cv::VideoCaptureAPIs videoCapAPI = cv::CAP_V4L2;
 
-    // VideoCapture (const String &filename, int apiPreference=CAP_ANY)
-    m_cap.open(videoIdx, videoCapAPI);
+    m_cap.open(videoIdx, cv::CAP_MSMF);
 }
 
 void UsbCam::setWidth(int width) {
