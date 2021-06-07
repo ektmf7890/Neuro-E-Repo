@@ -59,6 +59,4 @@ int get_executor_status();
 
 nrt::NDBufferList execute(nrt::NDBuffer resized_img_buffer);
 
-int saveModel();
-
 #endif // NRTEXE_H

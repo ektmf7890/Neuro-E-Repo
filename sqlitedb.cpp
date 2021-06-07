@@ -12,29 +12,15 @@ sqliteDB::sqliteDB()
 }
 
 sqliteDB::~sqliteDB(){
-    if(db.isOpen()){
-        // Will close any open queries before removing the database connection.
-        db.close();
-    }
 }
 
 QSqlError sqliteDB::InitialDBSetup(){
-    if(!QSqlDatabase::drivers().contains("QSQLITE", Qt::CaseInsensitive)){
-        qDebug() << "SQLite database driver is not available.";
-        return db.lastError();
-    }
-
-    db = QSqlDatabase::addDatabase("QSQLITE", DBConnectionName);
-    db.setDatabaseName(DBPath);
+    QSqlDatabase main_thread_db = QSqlDatabase::addDatabase("QSQLITE", "main_thread");
+    main_thread_db.setDatabaseName(DBPath);
 
     QSqlError err;
 
-    if(!db.open()){
-        err = db.lastError();
-        db.close();
-        qDebug() << "Databse connection failed to open. Closing the database connection now.";
-        return err;
-    }
+    main_thread_db.open();
 
     // Create resource directories
 
@@ -56,8 +42,8 @@ QSqlError sqliteDB::InitialDBSetup(){
 
 
     // Create Tables If not created already
-    QSqlQuery q(QSqlDatabase::database(DBConnectionName));
-    QStringList tables = db.tables();
+    QSqlQuery q(QSqlDatabase::database("main_thread"));
+    QStringList tables = main_thread_db.tables();
 
     if(!tables.contains("ImageSets", Qt::CaseInsensitive)){
         qDebug() << "Create Image Sets Table.";
@@ -97,8 +83,9 @@ QSqlError sqliteDB::InitialDBSetup(){
     return QSqlError();
 }
 
-QSqlError sqliteDB::ConfirmDBConnection(){
-    if(!(db.isOpen() && db.contains(DBConnectionName))){
+QSqlError sqliteDB::ConfirmDBConnection(QString connection_name){
+    QSqlDatabase db = QSqlDatabase::database(connection_name);
+    if(!db.isOpen()){
         return InitialDBSetup();
     }
 
@@ -107,14 +94,16 @@ QSqlError sqliteDB::ConfirmDBConnection(){
 }
 
 int sqliteDB::InsertImageSet(QString name){
-    if(ConfirmDBConnection().type() != QSqlError::NoError){
+    QString db_connection = "main_thread";
+
+    if(ConfirmDBConnection(db_connection).type() != QSqlError::NoError){
         qDebug() << "Failed to insert image set: " << name;
         return -1;
     }
 
     qDebug() << "Loading image set: " << name;
 
-    QSqlQuery q(QSqlDatabase::database(DBConnectionName));
+    QSqlQuery q(QSqlDatabase::database(db_connection));
 
     q.prepare(INSERT_IMAGE_SET);
 
@@ -140,14 +129,15 @@ int sqliteDB::InsertImageSet(QString name){
 }
 
 int sqliteDB::InsertImage(QString imagePath, QString name, int height, int width, int imageSetID){
-    if(ConfirmDBConnection().type() != QSqlError::NoError){
+    QString db_connection = "save_thread";
+    if(ConfirmDBConnection(db_connection).type() != QSqlError::NoError){
         qDebug() << "Failed to insert image: " << name;
         return -1;
     }
 
     qDebug() << "Loading image: " << name;
 
-    QSqlQuery q(QSqlDatabase::database(DBConnectionName));
+    QSqlQuery q(QSqlDatabase::database(db_connection));
 
     q.prepare(INSERT_IMAGE);
 
@@ -170,9 +160,10 @@ int sqliteDB::InsertImage(QString imagePath, QString name, int height, int width
         return -1;
     }
 
-    QVariant id = q.lastInsertId();
-    if(id.canConvert(QMetaType::Int)){
-        return id.toInt();
+    QVariant id_var = q.lastInsertId();
+
+    if(id_var.canConvert(QMetaType::Int)){
+        return id_var.toInt();
     }
     else{
         return -1;
@@ -180,14 +171,13 @@ int sqliteDB::InsertImage(QString imagePath, QString name, int height, int width
 }
 
 int sqliteDB::InsertModel(QString srcModelPath, QString name, QString type, QString platform, QString searchspace, QString inferencelevel){
-    if(ConfirmDBConnection().type() != QSqlError::NoError){
+    QString db_connection = "main_thread";
+    if(ConfirmDBConnection(db_connection).type() != QSqlError::NoError){
         qDebug() << "Failed to insert model: " << name;
         return -1;
     }
 
-    qDebug() << "Loading model: " << name;
-
-    QSqlQuery q(QSqlDatabase::database(DBConnectionName));
+    QSqlQuery q(QSqlDatabase::database(db_connection));
 
     q.prepare(INSERT_MODEL);
 
@@ -195,10 +185,10 @@ int sqliteDB::InsertModel(QString srcModelPath, QString name, QString type, QStr
 
     QUuid uID = QUuid::createUuid();
     QString suffix = "." + srcModelPath.split(".").last();
-    QString newModelPath = modelsDir.absolutePath() + "/" + uID.toString() + suffix;
+    QString newModelPath = modelsDir.absolutePath() + "/" + uID.toString().remove(QChar('{')).remove(QChar('}')) + suffix;
 
-    if(!QFile::exists(srcModelPath) || !QFile::exists(newModelPath)){
-        qDebug() << "InsertImage) Image paths are incorrect";
+    if(!QFile::exists(srcModelPath)){
+        qDebug() << "Insert Model) Selected Model path does not exist.";
         return -1;
     }
 
@@ -227,20 +217,21 @@ int sqliteDB::InsertModel(QString srcModelPath, QString name, QString type, QStr
 }
 
 int sqliteDB::InsertEvaluationSet(int imagesetID, int modelID){
-    if(ConfirmDBConnection().type() != QSqlError::NoError){
+    QString db_connection = "main_thread";
+    if(ConfirmDBConnection(db_connection).type() != QSqlError::NoError){
         qDebug() << "Failed to make evaluation set";
         return -1;
     }
 
     qDebug() << "Making evaluation set.";
 
-    QSqlQuery q(QSqlDatabase::database(DBConnectionName));
+    QSqlQuery q(QSqlDatabase::database(db_connection));
 
     q.prepare(INSERT_EVALUATION_SET);
 
     QString createdOn = QDateTime::currentDateTime().toString("dd-MM-yyyy hh:mm:ss");
     QUuid uID = QUuid::createUuid();
-    QString evaluationJsonPath = evaluationsDir.absolutePath() + "/" + uID.toString() + ".json";
+    QString evaluationJsonPath = evaluationsDir.absolutePath() + "/" + uID.toString().remove(QChar('{')) + ".json";
 
     q.addBindValue(createdOn);
     q.addBindValue(imagesetID);
@@ -262,12 +253,13 @@ int sqliteDB::InsertEvaluationSet(int imagesetID, int modelID){
 }
 
 int sqliteDB::InsertResultItem(QString resultImagePath, int imageID, int evaluationSetID){
-    if(ConfirmDBConnection().type() != QSqlError::NoError){
+    QString db_connection = "save_thread";
+    if(ConfirmDBConnection(db_connection).type() != QSqlError::NoError){
         qDebug() << "Failed to make result item";
         return -1;
     }
 
-    QSqlQuery q(QSqlDatabase::database(DBConnectionName));
+    QSqlQuery q(QSqlDatabase::database(db_connection));
 
     q.prepare(INSERT_RESULT_ITEM);
 
@@ -293,12 +285,13 @@ int sqliteDB::InsertResultItem(QString resultImagePath, int imageID, int evaluat
 }
 
 QString sqliteDB::getEvalutionJsonPath(int evaluationSetId){
-    if(ConfirmDBConnection().type() != QSqlError::NoError){
+    QString db_connection = "main_thread";
+    if(ConfirmDBConnection(db_connection).type() != QSqlError::NoError){
         qDebug() << "getEvaluationJsonPath) DB Connection Failed.";
         return "";
     }
 
-    QSqlQuery q(QSqlDatabase::database(DBConnectionName));
+    QSqlQuery q(QSqlDatabase::database(db_connection));
 
     q.prepare("SELECT EvaluationJsonPath FROM EvaluationSets WHERE Id=?");
     q.addBindValue(evaluationSetId);
@@ -312,12 +305,13 @@ QString sqliteDB::getEvalutionJsonPath(int evaluationSetId){
 }
 
 int sqliteDB::getEvaluationSetID(int imageSetId, int modelId){
-    if(ConfirmDBConnection().type() != QSqlError::NoError){
+    QString db_connection = "main_thread";
+    if(ConfirmDBConnection(db_connection).type() != QSqlError::NoError){
         qDebug() << "evaluationSetExists) DB Connection Failed.";
         return -1;
     }
 
-    QSqlQuery q(QSqlDatabase::database(DBConnectionName));
+    QSqlQuery q(QSqlDatabase::database(db_connection));
 
     q.prepare("SELECT Id FROM EvaluationSets WHERE ImageSetId=? AND ModelId=?");
     q.addBindValue(imageSetId);

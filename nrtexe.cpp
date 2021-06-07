@@ -141,8 +141,6 @@ QString set_model(QString modelPath, bool fp16_flag) {
     }
     qDebug() << "NRT) Executor Created";
 
-    saveModel();
-
     return modelPath;
 }
 

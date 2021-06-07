@@ -70,7 +70,6 @@ const auto CREATE_TABLE_RESULT_ITEMS = QLatin1String(
             CREATE TABLE IF NOT EXISTS ResultItems(
                 Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                 CreatedOn TEXT NOT NULL,
-                InfTime INTEGER NOT NULL,
                 ResultImagePath TEXT NOT NULL,
                 ImageId INTEGER NOT NULL,
                 EvaluationSetId INTEGER NOT NULL,
@@ -100,7 +99,7 @@ const auto INSERT_EVALUATION_SET = QLatin1String(
 
 const auto INSERT_RESULT_ITEM = QLatin1String(
             R"(
-            INSERT OR REPLACE INTO ImageSets(CreatedOn, InfTime, ResultImagePath, ImageId, EvaluationSetId) VALUES(?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO ResultItems(CreatedOn, ImageId, EvaluationSetId, ResultImagePath) VALUES(?, ?, ?, ?)
             )");
 
 
@@ -111,14 +110,11 @@ public:
     ~sqliteDB();
 
 public:
-    QSqlDatabase db;
-
-    QString DBPath = QString("%1%2").arg(qApp->applicationDirPath()).arg("/neuore.db");
-    QString DBConnectionName = "neuroeDB";
+    QString DBPath = QString("%1%2").arg(qApp->applicationDirPath()).arg("/neuore.db");;
 
     QSqlError InitialDBSetup();
 
-    QSqlError ConfirmDBConnection();
+    QSqlError ConfirmDBConnection(QString connection_name);
 
     int InsertImageSet(QString name);
     int InsertImage(QString imagePath, QString name, int height, int width, int imageSetID);

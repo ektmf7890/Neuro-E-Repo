@@ -30,9 +30,7 @@ struct Share_Mat
 
     string save_path;
 
-    //ImageSetId for inserting Image row
     int imageSetId;
-    //EvaluationSetId for inserting ResultItems row
     int evaluationSetId;
 
     QFile json_file;
