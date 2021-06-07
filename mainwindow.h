@@ -34,8 +34,11 @@ struct Share_Mat
     int imageSetId;
     //EvaluationSetId for inserting ResultItems row
     int evaluationSetId;
-    // Evaluation json file
-    QJsonObject evaluation_json;
+
+    QFile json_file;
+    QJsonDocument json_doc;
+    QJsonObject title;
+    QJsonArray body_data;
 };
 
 namespace Ui {
@@ -124,6 +127,7 @@ private slots:
     void anomSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vector<std::string> &new_row);
 
     bool configSaveSettings();
+    void initJson(int evaluationSetId);
 
 private:
     Ui::MainWindow *ui;

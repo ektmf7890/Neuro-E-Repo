@@ -13,10 +13,10 @@
 #include <QUuid>
 #include <QFile>
 
-QDir imagesDir = QDir("resources/images");
-QDir modelsDir = QDir("resources/models");
-QDir evaluationsDir = QDir("resources/evaluations");
-QDir resultImagesDir = QDir("resources/resultImages");
+static QDir imagesDir = QDir("resources/images");
+static QDir modelsDir = QDir("resources/models");
+static QDir evaluationsDir = QDir("resources/evaluations");
+static QDir resultImagesDir = QDir("resources/resultImages");
 
 const auto CREATE_TABLE_IMAGE_SETS = QLatin1String(
             R"(
