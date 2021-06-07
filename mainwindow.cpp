@@ -1767,6 +1767,46 @@ void MainWindow::showResult() {
     ui->lab_show_res->setPixmap(m_qpixmap.scaled(ui->lab_show_res->width(), ui->lab_show_res->height(), Qt::KeepAspectRatio));
 }
 
+void MainWindow::initJson(int evaluationSetId){
+    std::unique_lock<std::mutex> lock(m_save_info._mutex);
+
+    QJsonObject& title = m_save_info.title;
+    QJsonArray& body_data = m_save_info.body_data;
+    QFile& file = m_save_info.json_file;
+
+    QString suffix = "";
+    if(get_model_type() == "Classification"){
+        suffix = "_NumOfImages";
+    }
+    else if(get_model_type() == "Detection" || get_model_type() == "OCR" || get_model_type() == "Anomaly"){
+        suffix = "_NumOfDetectedBoxes";
+    }
+    else if(get_model_type() == "Segmentation"){
+        suffix = "_NumOfRegions";
+    }
+    QString class_name;
+    for(int i=1; i < get_model_class_num(); i++){
+        class_name = get_model_class_name(i);
+        title[class_name + suffix] = 0;
+    }
+
+    title["evaluationSetId"] = evaluationSetId;
+    title["numOfImages"] = 0;
+    title["avgInfTime"] = 0;
+    title["num_of_classes"] = get_model_class_num();
+    title["data"] = body_data;
+
+    m_save_info.json_doc.setObject(title);
+
+    QString path = m_db->getEvalutionJsonPath(evaluationSetId);
+    file.setFileName(path);
+    if(!file.open(QIODevice::ReadWrite)){
+        qDebug() << "Failed to open file";
+    }
+    file.write(m_save_info.json_doc.toJson());
+    file.close();
+}
+
 bool MainWindow::configSaveSettings(){
     // Setting up Cam Save Configuration
     int imageSetId = -1, evaluationSetId;
@@ -1873,11 +1913,37 @@ bool MainWindow::configSaveSettings(){
     }
 
     evaluationSetId = m_db->getEvaluationSetID(imageSetId, currentModelId);
+
+    // 새로운 evlauation set 생성
     if(evaluationSetId == -1){
         evaluationSetId = m_db->InsertEvaluationSet(imageSetId, currentModelId);
         if(evaluationSetId == -1){
             qDebug() << "Evaluation set insert failed";
             return false;
+        }
+        initJson(evaluationSetId);
+    }
+
+    // 기존 evaluation set id를 사용하고 json을 불러옴.
+    else{
+        {
+            std::unique_lock<std::mutex> lock(m_save_info._mutex);
+            QString path = m_db->getEvalutionJsonPath(evaluationSetId);
+
+            QFile& file = m_save_info.json_file;
+            file.setFileName(path);
+
+            if(!file.open(QIODevice::ReadWrite)){
+                qDebug() << "Failed to open json file.";
+                return false;
+            }
+
+            QByteArray load_data = file.readAll();
+            m_save_info.json_doc = QJsonDocument::fromJson(load_data);
+            file.close();
+
+            m_save_info.title = m_save_info.json_doc.object();
+            m_save_info.body_data = m_save_info.title["data"].toArray();
         }
     }
 
@@ -1885,9 +1951,6 @@ bool MainWindow::configSaveSettings(){
         std::unique_lock<std::mutex> lock(m_save_info._mutex);
         m_save_info.imageSetId = imageSetId;
         m_save_info.evaluationSetId = evaluationSetId;
-        QJsonObject& json = m_save_info.evaluation_json;
-
-        json = QJsonObject();
     }
     return true;
 }
@@ -1928,6 +1991,9 @@ void MainWindow::on_rad_cam_autosave_clicked()
     }
     else{
         ui->rad_cam_autosave->setChecked(false);
+        QMessageBox msgbox;
+        msgbox.setText("Failed to configure the save settings.");
+        msgbox.exec();
         return;
     }
 }

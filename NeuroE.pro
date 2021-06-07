@@ -50,13 +50,13 @@ FORMS += \
 
 INCLUDEPATH += C:\\opencv\build\install\include
 
-INCLUDEPATH += D:\\nrt\include
+INCLUDEPATH += C:\\nrt\include
 
-LIBS += -LC:\\opencv\build\install\x64\vc15\lib \
+LIBS += -LC:\\opencv\build\install\x64\vc16\lib \
 #        -lopencv_world452 \
         -lopencv_world452d
 
-LIBS += -LD:\\nrt\lib\release \
+LIBS += -LC:\\nrt\lib\release \
         -lnrt
 
 #LIBS += -L/usr/lib \
