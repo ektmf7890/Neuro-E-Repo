@@ -260,50 +260,6 @@
                </property>
               </widget>
              </item>
-             <item>
-              <widget class="QPushButton" name="btn_view_eval_stats">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>37</width>
-                 <height>37</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>16777215</width>
-                 <height>16777215</height>
-                </size>
-               </property>
-               <property name="text">
-                <string/>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="btn_display_eval_results">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>37</width>
-                 <height>37</height>
-                </size>
-               </property>
-               <property name="text">
-                <string/>
-               </property>
-              </widget>
-             </item>
             </layout>
            </widget>
           </item>
@@ -425,6 +381,16 @@
                     <number>2</number>
                    </property>
                    <item>
+                    <widget class="QTableWidget" name="tableWidget_result">
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
                     <widget class="QLabel" name="lab_result_info">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -440,16 +406,6 @@
                      </property>
                      <property name="text">
                       <string/>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QTableWidget" name="tableWidget_result">
-                     <property name="sizePolicy">
-                      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                       <horstretch>0</horstretch>
-                       <verstretch>0</verstretch>
-                      </sizepolicy>
                      </property>
                     </widget>
                    </item>
@@ -802,10 +758,10 @@
                       </property>
                       <layout class="QVBoxLayout" name="verticalLayout_14">
                        <property name="spacing">
-                        <number>10</number>
+                        <number>0</number>
                        </property>
                        <property name="leftMargin">
-                        <number>20</number>
+                        <number>15</number>
                        </property>
                        <property name="topMargin">
                         <number>0</number>
@@ -879,32 +835,6 @@
                            </widget>
                           </item>
                           <item>
-                           <widget class="QWidget" name="Manual_Save" native="true">
-                            <layout class="QHBoxLayout" name="horizontalLayout_6">
-                             <item>
-                              <widget class="QRadioButton" name="rad_cam_mansave">
-                               <property name="sizePolicy">
-                                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                                 <horstretch>2</horstretch>
-                                 <verstretch>0</verstretch>
-                                </sizepolicy>
-                               </property>
-                               <property name="text">
-                                <string>Manually Save Inference Results</string>
-                               </property>
-                              </widget>
-                             </item>
-                             <item>
-                              <widget class="QPushButton" name="btn_man_save_settings">
-                               <property name="text">
-                                <string>Save Settings</string>
-                               </property>
-                              </widget>
-                             </item>
-                            </layout>
-                           </widget>
-                          </item>
-                          <item>
                            <widget class="QWidget" name="Auto_Save" native="true">
                             <layout class="QHBoxLayout" name="horizontalLayout_15">
                              <item>
@@ -917,13 +847,6 @@
                                </property>
                                <property name="text">
                                 <string>Auto Save Inference Results</string>
-                               </property>
-                              </widget>
-                             </item>
-                             <item>
-                              <widget class="QPushButton" name="btn_cam_save_settings">
-                               <property name="text">
-                                <string>Save Settings</string>
                                </property>
                               </widget>
                              </item>
@@ -1450,16 +1373,16 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QPushButton" name="btn_select_model">
+                 <widget class="QPushButton" name="btn_select_single_mode">
                   <property name="text">
-                   <string>Single Model</string>
+                   <string>Single Mode</string>
                   </property>
                  </widget>
                 </item>
                 <item>
-                 <widget class="QPushButton" name="pushButton_2">
+                 <widget class="QPushButton" name="btn_select_ensmble_mode">
                   <property name="text">
-                   <string>Ensmble</string>
+                   <string>Ensmble Mode</string>
                   </property>
                  </widget>
                 </item>
@@ -1485,13 +1408,6 @@
                    </size>
                   </property>
                  </spacer>
-                </item>
-                <item>
-                 <widget class="QPushButton" name="btn_select_gpu">
-                  <property name="text">
-                   <string>Select GPU</string>
-                  </property>
-                 </widget>
                 </item>
                </layout>
               </widget>
@@ -1529,7 +1445,7 @@
                    </sizepolicy>
                   </property>
                   <property name="currentIndex">
-                   <number>1</number>
+                   <number>0</number>
                   </property>
                   <widget class="QWidget" name="Model_Info_Page">
                    <layout class="QVBoxLayout" name="verticalLayout_11">

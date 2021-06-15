@@ -1,8 +1,6 @@
-#include "shared_include.h"
-
 #ifndef USBCAM_H
 #define USBCAM_H
-
+#include "shared_include.h"
 #include <QLabel>
 #include <QImage>
 #include <QPixmap>
@@ -17,7 +15,7 @@ class UsbCam
 public:
     UsbCam();
     ~UsbCam();
-    cv::Mat m_frame; // m_cap 객체가 캡쳐한 프레임을 저장하는 메모리
+    cv::Mat m_frame;
 
 public slots:
     bool isExist();

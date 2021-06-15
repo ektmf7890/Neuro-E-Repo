@@ -7,12 +7,6 @@ Using Neuro-R version 2.2.3
 using namespace std;
 using namespace cv;
 
-nrt::Device m_device;
-shared_ptr<nrt::Executor> m_executor_ptr;
-shared_ptr<nrt::Model> m_model_ptr;
-
-int PROB_IDX = -1, PRED_IDX = -1, CAM_IDX = -1, ANO_IDX = -1, ROT_IDX=-1;
-
 BoundingBox convert_to_bounding_box(const int* bcyxhw_ptr, const double h_ratio, const double w_ratio) {
     BoundingBox bbox;
     bbox.batch_index  = bcyxhw_ptr[0];
@@ -34,26 +28,29 @@ bool bbox_cmp(const BoundingBox & a, const BoundingBox & b) {
     return (a.box_center_X < b.box_center_X) ? true : false;
 }
 
-int get_gpu_num() {
+NrtExe::NrtExe(){};
+NrtExe::~NrtExe(){};
+
+int NrtExe::get_gpu_num() {
     return nrt::Device::get_num_gpu_devices();
 }
 
-bool get_gpu_status() {
+bool NrtExe::get_gpu_status() {
     return (m_device.devtype == nrt::DevType::DEVICE_CUDA_GPU) ? true : false;
 }
 
-bool set_gpu(int gpuIdx) {
+bool NrtExe::set_gpu(int gpuIdx) {
     m_device = nrt::Device::get_gpu_device(gpuIdx);
     if (m_device.devtype == nrt::DevType::DEVICE_CUDA_GPU)
         qDebug() << "NRT) Set GPU" << gpuIdx << ":" << get_gpu_name();
     return (m_device.devtype == nrt::DevType::DEVICE_CUDA_GPU) ? true : false;
 }
 
-QString get_gpu_name() {
+QString NrtExe::get_gpu_name() {
     return QString(m_device.get_device_name());
 }
 
-QString set_model(QString modelPath, bool fp16_flag) {
+QString NrtExe::set_model(QString modelPath, bool fp16_flag) {
     // Load Model File
     if (m_model_ptr.use_count() > 0)
         m_model_ptr.reset();
@@ -62,8 +59,6 @@ QString set_model(QString modelPath, bool fp16_flag) {
     wchar_t mModelPath[512];
     modelPath.toWCharArray(mModelPath);
     mModelPath[modelPath.length()] = L'\0';
-
-    const wchar_t* m_modelPath = modelPath.toStdWString().c_str();
 
     m_model_ptr = make_shared<nrt::Model>(mModelPath);
 
@@ -144,17 +139,17 @@ QString set_model(QString modelPath, bool fp16_flag) {
     return modelPath;
 }
 
-int get_model_status() {
+int NrtExe::get_model_status() {
     return (m_model_ptr.use_count() > 0) ? m_model_ptr->get_status() : -1;
 }
 
-QString get_model_name() {
+QString NrtExe::get_model_name() {
     if (get_model_status() != nrt::STATUS_SUCCESS)
         return QString("");
     return QString(m_model_ptr->get_model_name());
 }
 
-QString get_model_type() {
+QString NrtExe::get_model_type() {
     if (get_model_status() != nrt::STATUS_SUCCESS)
         return QString("");
 
@@ -175,89 +170,89 @@ QString get_model_type() {
         return QString("Type Error");
 }
 
-QString get_model_training_type() {
+QString NrtExe::get_model_training_type() {
     if (get_model_status() != nrt::STATUS_SUCCESS)
         return QString("");
     return QString(m_model_ptr->get_training_type());
 }
 
-QString get_model_search_level() {
+QString NrtExe::get_model_search_level() {
     if (get_model_status() != nrt::STATUS_SUCCESS)
         return QString("");
     return (m_model_ptr->get_training_search_space_level() == -1) ? QString("Fast") : (QString("Lv") + QString::number(m_model_ptr->get_training_search_space_level()+1));
 }
 
-QString get_model_inference_level() {
+QString NrtExe::get_model_inference_level() {
     if (get_model_status() != nrt::STATUS_SUCCESS)
         return QString("");
     return (QString("Lv") + QString::number(m_model_ptr->get_training_inference_time_level()+1));
 }
 
-int get_model_class_num() {
+int NrtExe::get_model_class_num() {
     if (get_model_status() != nrt::STATUS_SUCCESS)
         return 0;
     return m_model_ptr->get_num_classes();
 }
 
-QString get_model_class_name(int class_idx) {
+QString NrtExe::get_model_class_name(int class_idx) {
     if (get_model_status() != nrt::STATUS_SUCCESS)
         return QString("");
     return m_model_ptr->get_class_name(class_idx);
 }
 
-nrt::NDBuffer get_model_prob_threshold() {
+nrt::NDBuffer NrtExe::get_model_prob_threshold() {
     if (get_model_status() != nrt::STATUS_SUCCESS)
         return nrt::NDBuffer();
     return m_model_ptr->get_prob_threshold();
 }
 
-nrt::NDBuffer get_model_size_threshold() {
+nrt::NDBuffer NrtExe::get_model_size_threshold() {
     if (get_model_status() != nrt::STATUS_SUCCESS)
         return nrt::NDBuffer();
     return m_model_ptr->get_size_threshold();
 }
 
-nrt::Shape get_model_input_shape(int idx) {
+nrt::Shape NrtExe::get_model_input_shape(int idx) {
     if (get_model_status() != nrt::STATUS_SUCCESS)
         return nrt::Shape();
     return m_model_ptr->get_input_shape(idx);
 }
 
-nrt::DType get_model_input_dtype(int idx){
+nrt::DType NrtExe::get_model_input_dtype(int idx){
     if (get_model_status() != nrt::STATUS_SUCCESS)
         return nrt::DType();
     return m_model_ptr->get_input_dtype(idx);
 }
 
-nrt::InterpolationType get_model_interpolty(int idx){
+nrt::InterpolationType NrtExe::get_model_interpolty(int idx){
     if (get_model_status() != nrt::STATUS_SUCCESS)
         return nrt::InterpolationType::INTER_LINEAR;
     return m_model_ptr->get_InterpolationType(idx);
 }
 
-float get_model_scale_factor() {
+float NrtExe::get_model_scale_factor() {
     if (get_model_status() != nrt::STATUS_SUCCESS)
         return -1;
     return m_model_ptr->get_scale_factor();
 }
 
-int get_model_output_num() {
+int NrtExe::get_model_output_num() {
     if(get_model_status() != nrt::STATUS_SUCCESS)
         return -1;
     return m_model_ptr->get_num_outputs();
 }
 
-bool is_model_patch_mode() {
+bool NrtExe::is_model_patch_mode() {
     if (get_model_status() != nrt::STATUS_SUCCESS)
         return false;
     return m_model_ptr->is_patch_mode(0);
 }
 
-int get_executor_status(){
+int NrtExe::get_executor_status(){
     return (m_executor_ptr.use_count() > 0) ? m_executor_ptr->get_status() : -1;
 }
 
-nrt::NDBufferList execute(nrt::NDBuffer resized_img_buffer) {
+nrt::NDBufferList NrtExe::execute(nrt::NDBuffer resized_img_buffer) {
     nrt::NDBufferList outputs;
 
     nrt::Status status = m_executor_ptr->execute(resized_img_buffer, outputs);

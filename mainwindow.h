@@ -36,8 +36,10 @@ struct Share_Mat
     QFile json_file;
     QJsonDocument json_doc;
     QJsonObject title;
-    QJsonArray body_data;
 };
+
+
+QString set_model_thread(NrtExe* nrt_ptr, QString modelPath, bool fp16_flag);
 
 namespace Ui {
 class MainWindow;
@@ -86,7 +88,6 @@ private slots:
     void on_btn_img_mode_clicked();
 
     void on_btn_cam_select_clicked();
-    void on_btn_cam_save_clicked();
 
     void on_btn_cam_play_clicked();
     void on_btn_cam_pause_clicked();
@@ -94,14 +95,13 @@ private slots:
 
     void on_rad_cam_rtmode_clicked();
     void on_rad_cam_autosave_clicked();
-    void on_rad_cam_mansave_clicked();
 
     void on_chb_show_prediction_clicked();
 
-    void on_btn_select_model_clicked();
+    void on_btn_select_single_mode_clicked();
     void set_model_started();
     void set_model_completed();
-    void on_btn_select_gpu_clicked();
+    void set_model_completed_ens();
 
     void on_btn_img_input_clicked();
     void on_btn_img_output_clicked();
@@ -118,14 +118,22 @@ private slots:
 
     void on_com_cam_input_select_currentTextChanged(const QString& text);
 
+    // single mode 전용 set result 함수들.
     void claSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vector<std::string> &new_row);
     void segSetResults(nrt::NDBuffer merged_pred_output, cv::Mat &PRED_IMG, vector<std::string> &new_row);
     void detSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vector<std::string> &new_row);
     void ocrSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vector<std::string> &new_row);
     void anomSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vector<std::string> &new_row);
 
+    // ensmble 중 det->cla set result 함수.
+    void detClaEnsmbleSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vector<std::string> &new_row);
+
     bool configSaveSettings();
     void initJson(int evaluationSetId);
+    void on_btn_select_ensmble_mode_clicked();
+    void setInfMode(int infMode);
+    bool is_ready_for_inf(NrtExe*m_nrt_ptr);
+    void select_gpu(NrtExe* nrt_ptr, QString msg);
 
 private:
     Ui::MainWindow *ui;
@@ -135,7 +143,9 @@ private:
 
     // QFutureWatcher & QFuture for executor creating thread
     std::shared_ptr<QFutureWatcher<QString>> futureWatcher = std::make_shared<QFutureWatcher<QString>>(this);
+    std::shared_ptr<QFutureWatcher<QString>> futureWatcherEns = std::make_shared<QFutureWatcher<QString>>(this);
     QFuture<QString> future;
+    QFuture<QString> futureEns;
 
     // Image input and output folder directory.
     std::shared_ptr<QString> m_input_path;
@@ -145,7 +155,6 @@ private:
     cv::VideoCapture m_videoInputCap;
     QString video_filename;
     int frameRate = 30;
-//    QTime lastFrameExtractedTime;
 
     bool video_mode_flag = false;
     bool cam_mode_flag = false;
@@ -173,6 +182,16 @@ private:
 
     // SQLite Databse class
     std::shared_ptr<sqliteDB> m_db = std::make_shared<sqliteDB>();
+
+    // NrtExe class
+    std::shared_ptr<NrtExe> m_nrt;
+    std::shared_ptr<NrtExe> m_nrt_ensmble;
+    static const int INF_MODE_NONE = -1;
+    static const int INF_MODE_SINGLE = 0;
+    static const int INF_MODE_DET_CLA = 1;
+    int inf_mode_status = INF_MODE_NONE;
+
+    bool insert_new_model_flag = false;
 };
 
 #endif // MAINWINDOW_H

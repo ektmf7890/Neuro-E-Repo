@@ -60,9 +60,11 @@ const auto CREATE_TABLE_EVALUATION_SETS = QLatin1String(
                 CreatedOn TEXT NOT NULL,
                 ImageSetId INTEGER NOT NULL,
                 ModelId INTEGER NOT NULL,
+                EnsmbleModelId INTEGER NOT NULL,
                 EvaluationJsonPath TEXT NOT NULL,
                 FOREIGN KEY(ImageSetId) REFERENCES ImageSets(Id) ON DELETE CASCADE,
-                FOREIGN KEY(ModelId) REFERENCES Models(Id) ON DELETE CASCADE)
+                FOREIGN KEY(ModelId) REFERENCES Models(Id) ON DELETE CASCADE,
+                FOREIGN KEY(EnsmbleModelId) REFERENCES Models(Id) ON DELETE CASCADE)
             )");
 
 const auto CREATE_TABLE_RESULT_ITEMS = QLatin1String(
@@ -94,7 +96,7 @@ const auto INSERT_MODEL = QLatin1String(
 
 const auto INSERT_EVALUATION_SET = QLatin1String(
             R"(
-            INSERT OR REPLACE INTO EvaluationSets(CreatedOn, ImageSetId, ModelId, EvaluationJsonPath) VALUES(?, ?, ?, ?)
+            INSERT OR REPLACE INTO EvaluationSets(CreatedOn, ImageSetId, ModelId, EnsmbleModelId, EvaluationJsonPath) VALUES(?, ?, ?, ?, ?)
             )");
 
 const auto INSERT_RESULT_ITEM = QLatin1String(
@@ -119,12 +121,15 @@ public:
     int InsertImageSet(QString name);
     int InsertImage(QString imagePath, QString name, int height, int width, int imageSetID);
     int InsertModel(QString srcModelPath, QString name, QString type, QString platform, QString searchspace, QString inferencelevel);
-    int InsertEvaluationSet(int imagesetID, int modelID);
+    int InsertEvaluationSet(int imagesetID, int modelID, int ensmbleModelId);
     int InsertResultItem(QString resultImagePath, int imageID, int evaluationSetID);
 
     QString getEvalutionJsonPath(int evaluationSetId);
 
-    int getEvaluationSetID(int imageSetId, int modelId);
+    int getEvaluationSetID(int imageSetId, int modelId, int ensmbleModelId);
+
+    QString getModelPath(int modelId);
+    QString getModelName(int modelId);
 };
 
 #endif // SQLITEDB_H

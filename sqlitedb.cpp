@@ -216,7 +216,7 @@ int sqliteDB::InsertModel(QString srcModelPath, QString name, QString type, QStr
     }
 }
 
-int sqliteDB::InsertEvaluationSet(int imagesetID, int modelID){
+int sqliteDB::InsertEvaluationSet(int imagesetID, int modelID, int ensmbleModelId){
     QString db_connection = "main_thread";
     if(ConfirmDBConnection(db_connection).type() != QSqlError::NoError){
         qDebug() << "Failed to make evaluation set";
@@ -231,11 +231,12 @@ int sqliteDB::InsertEvaluationSet(int imagesetID, int modelID){
 
     QString createdOn = QDateTime::currentDateTime().toString("dd-MM-yyyy hh:mm:ss");
     QUuid uID = QUuid::createUuid();
-    QString evaluationJsonPath = evaluationsDir.absolutePath() + "/" + uID.toString().remove(QChar('{')) + ".json";
+    QString evaluationJsonPath = evaluationsDir.absolutePath() + "/" + uID.toString().remove(QChar('{')).remove(QChar('}')) + ".json";
 
     q.addBindValue(createdOn);
     q.addBindValue(imagesetID);
     q.addBindValue(modelID);
+    q.addBindValue(ensmbleModelId);
     q.addBindValue(evaluationJsonPath);
 
     if(!q.exec()){
@@ -296,6 +297,11 @@ QString sqliteDB::getEvalutionJsonPath(int evaluationSetId){
     q.prepare("SELECT EvaluationJsonPath FROM EvaluationSets WHERE Id=?");
     q.addBindValue(evaluationSetId);
 
+    if(!q.exec()){
+        qDebug() << "getEvaluationJsonPath) " << q.lastError().text();
+        return "";
+    }
+
     while(q.next()){
         QString evaluationJsonPath = q.value(0).toString();
         return evaluationJsonPath;
@@ -304,7 +310,7 @@ QString sqliteDB::getEvalutionJsonPath(int evaluationSetId){
     return "";
 }
 
-int sqliteDB::getEvaluationSetID(int imageSetId, int modelId){
+int sqliteDB::getEvaluationSetID(int imageSetId, int modelId, int ensmbleModelId){
     QString db_connection = "main_thread";
     if(ConfirmDBConnection(db_connection).type() != QSqlError::NoError){
         qDebug() << "evaluationSetExists) DB Connection Failed.";
@@ -313,9 +319,10 @@ int sqliteDB::getEvaluationSetID(int imageSetId, int modelId){
 
     QSqlQuery q(QSqlDatabase::database(db_connection));
 
-    q.prepare("SELECT Id FROM EvaluationSets WHERE ImageSetId=? AND ModelId=?");
+    q.prepare("SELECT Id FROM EvaluationSets WHERE ImageSetId=? AND ModelId=? AND EnsmbleModelId=?");
     q.addBindValue(imageSetId);
     q.addBindValue(modelId);
+    q.addBindValue(ensmbleModelId);
 
     while(q.next()){
         int id = q.value(0).toInt();
@@ -323,4 +330,52 @@ int sqliteDB::getEvaluationSetID(int imageSetId, int modelId){
     }
 
     return -1;
+}
+
+QString sqliteDB::getModelPath(int modelId){
+    QString db_connection = "main_thread";
+    if(ConfirmDBConnection(db_connection).type() != QSqlError::NoError){
+        qDebug() << "getModelPath) DB Connection Failed.";
+        return "";
+    }
+
+    QSqlQuery q(QSqlDatabase::database(db_connection));
+
+    q.prepare("SELECT ModelPath FROM Models WHERE Id=?");
+    q.addBindValue(modelId);
+
+    if(!q.exec()){
+        qDebug() << "getModelPath) " << q.lastError().text();
+        return "";
+    }
+
+    while(q.next()){
+        return q.value(0).toString();
+    }
+
+    return "";
+}
+
+QString sqliteDB::getModelName(int modelId){
+    QString db_connection = "main_thread";
+    if(ConfirmDBConnection(db_connection).type() != QSqlError::NoError){
+        qDebug() << "getModelName) DB Connection Failed.";
+        return "";
+    }
+
+    QSqlQuery q(QSqlDatabase::database(db_connection));
+
+    q.prepare("SELECT Name FROM Models WHERE Id=?");
+    q.addBindValue(modelId);
+
+    if(!q.exec()){
+        qDebug() << "getModelName) " << q.lastError().text();
+        return "";
+    }
+
+    while(q.next()){
+        return q.value(0).toString();
+    }
+
+    return "";
 }

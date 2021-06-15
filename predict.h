@@ -6,7 +6,7 @@
 #include <nrtexe.h>
 #include <ui_mainwindow.h>
 
-nrt::NDBuffer get_img_buffer(cv::Mat ORG_IMG);
-nrt::NDBuffer seg_execute (nrt::NDBuffer image_buff, std::chrono::duration<double, std::milli> &inf_time);
+nrt::NDBuffer get_img_buffer(cv::Mat ORG_IMG, NrtExe* m_nrt);
+nrt::NDBuffer seg_execute (nrt::NDBuffer image_buff, std::chrono::duration<double, std::milli> &inf_time, NrtExe* m_nrt);
 
 #endif // PREDICT_H
