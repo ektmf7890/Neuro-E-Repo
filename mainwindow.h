@@ -134,6 +134,7 @@ private slots:
     void setInfMode(int infMode);
     bool is_ready_for_inf(NrtExe*m_nrt_ptr);
     void select_gpu(NrtExe* nrt_ptr, QString msg);
+    void on_com_video_list_currentTextChanged(const QString& text);
 
 private:
     Ui::MainWindow *ui;
@@ -192,6 +193,8 @@ private:
     int inf_mode_status = INF_MODE_NONE;
 
     bool insert_new_model_flag = false;
+
+    QStringList video_list = {};
 };
 
 #endif // MAINWINDOW_H

@@ -10,7 +10,8 @@ const string IMG_FORMAT = ".png";
 const string ORG_FOL = "org" + PathSeparator;
 const string PRED_FOL = "pred" + PathSeparator;
 
-const string VIDEO_TEXT = "Video File";
+const string VIDEO_FOLDER_TEXT = "Video Folder";
+const string SINGLE_VIDEO_TEXT = "Video File";
 const string CAMERA_TEXT = "Relatime Camera";
 
 QVector<QColor> COLOR_VECTOR;
@@ -125,13 +126,17 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // CAM Select ComboBox
     camType.append(QString::fromStdString(CAMERA_TEXT));
-    camType.append(QString::fromStdString(VIDEO_TEXT));
+    camType.append(QString::fromStdString(SINGLE_VIDEO_TEXT));
+    camType.append(QString::fromStdString(VIDEO_FOLDER_TEXT));
     ui->com_cam_input_select->addItems(camType);
-    if(ui->com_cam_input_select->currentText().toStdString() == VIDEO_TEXT){
+    if(ui->com_cam_input_select->currentText().toStdString() == SINGLE_VIDEO_TEXT){
         ui->btn_cam_select->setText("Select Video File");
     }
     else if(ui->com_cam_input_select->currentText().toStdString() == CAMERA_TEXT){
         ui->btn_cam_select->setText("Select Camera");
+    }
+    else if(ui->com_cam_input_select->currentText().toStdString() == VIDEO_FOLDER_TEXT){
+        ui->btn_cam_select->setText("Select Video Folder");
     }
 
     // CAM Save Style
@@ -174,7 +179,7 @@ MainWindow::MainWindow(QWidget *parent) :
     }
 
     // video mode flag, cam mode flag init
-    if(ui->com_cam_input_select->currentText().toStdString() == VIDEO_TEXT){
+    if(ui->com_cam_input_select->currentText().toStdString() == SINGLE_VIDEO_TEXT || ui->com_cam_input_select->currentText().toStdString() == VIDEO_FOLDER_TEXT){
         video_mode_flag = true;
         cam_mode_flag =false;
     }
@@ -182,6 +187,9 @@ MainWindow::MainWindow(QWidget *parent) :
         video_mode_flag = false;
         cam_mode_flag = true;
     }
+
+    ui->com_video_list->hide();
+    ui->com_video_list->setSizeAdjustPolicy(QComboBox::AdjustToContents);
 }
 
 MainWindow::~MainWindow()
@@ -1478,6 +1486,8 @@ void MainWindow::detClaEnsmbleSetResults(nrt::NDBufferList outputs, cv::Mat &PRE
 
             // threshold by size
             // threshold by probability
+            const float* box_probs = prob_ptr + box_idx*(m_nrt->get_model_class_num() + 1);
+            float cur_box_pred_class_prob = box_probs[bbox.class_number+1] * 100;
 
             int x_start = bbox.box_center_X - ensmble_crop_size/2;
             int y_start = bbox.box_center_Y - ensmble_crop_size/2;
@@ -1498,6 +1508,11 @@ void MainWindow::detClaEnsmbleSetResults(nrt::NDBufferList outputs, cv::Mat &PRE
             cv::Rect bounds(x_start, y_start, ensmble_crop_size, ensmble_crop_size);
             cv::Mat cropped_cla_img = PRED_IMG(bounds);
 
+            QString _time = QDateTime::currentDateTime().toString("hh-mm-ss-zzz");
+            QString path = "C:/Users/user/data/aaaa/" + _time + ".png";
+            qDebug() << "imwrite) " << path;
+            cv::imwrite(path.toStdString(), cropped_cla_img);
+
             nrt::NDBufferList cla_outputs;
             nrt::NDBuffer cla_output_prob;
             nrt::NDBuffer cla_output_pred;
@@ -1507,9 +1522,13 @@ void MainWindow::detClaEnsmbleSetResults(nrt::NDBufferList outputs, cv::Mat &PRE
             cla_output_pred = cla_outputs.get_at(m_nrt_ensmble->PRED_IDX);
             cla_output_prob = cla_outputs.get_at(m_nrt_ensmble->PROB_IDX);
 
-            int pred_cls_idx = *cla_output_pred.get_at_ptr<int>(0);
-            float pred_cls_prob = *cla_output_prob.get_at_ptr<float>(0, pred_cls_idx);
-            qDebug() << "Class: " << pred_cls_idx << ", Prob: " << pred_cls_prob;
+            int pred_cls_idx;
+            nrt::Shape output_pred_shape = cla_output_pred.get_shape();
+            for (int i = 0; i < output_pred_shape.dims[0]; i++) {
+                pred_cls_idx = *cla_output_pred.get_at_ptr<int>(i);
+                qDebug() << "Prediction class index(Not thresholded): " << QString::number(pred_cls_idx);
+            }
+            float pred_cls_prob = *cla_output_prob.get_at_ptr<float>(0, pred_cls_idx) * 100;
 
             // threshold by probability
             int r, g, b;
@@ -1533,10 +1552,11 @@ void MainWindow::detClaEnsmbleSetResults(nrt::NDBufferList outputs, cv::Mat &PRE
             else if(classname == QString::fromLocal8Bit("차량")){
                 classname = "car";
             }
+            classname += "(" + QString::number(cur_box_pred_class_prob) + "%, " +QString::number(pred_cls_prob) +"%)";
 
             if (!classname.isEmpty()) {
-                cv::putText(PRED_IMG, classname.toLocal8Bit().constData(), cv::Point(bbox.box_center_X - bbox.box_width / 2, bbox.box_center_Y - bbox.box_height / 2), FONT_HERSHEY_SIMPLEX, 1, white, 7);
-                cv::putText(PRED_IMG, classname.toLocal8Bit().constData(), cv::Point(bbox.box_center_X - bbox.box_width / 2, bbox.box_center_Y - bbox.box_height / 2), FONT_HERSHEY_SIMPLEX, 1, class_color_scalar, 4);
+                cv::putText(PRED_IMG, classname.toStdString(), cv::Point(bbox.box_center_X - bbox.box_width / 2, bbox.box_center_Y - bbox.box_height / 2), FONT_HERSHEY_SIMPLEX, 1, white, 7);
+                cv::putText(PRED_IMG, classname.toStdString(), cv::Point(bbox.box_center_X - bbox.box_width / 2, bbox.box_center_Y - bbox.box_height / 2), FONT_HERSHEY_SIMPLEX, 1, class_color_scalar, 4);
             }
         }
     }
@@ -1573,7 +1593,7 @@ void MainWindow::showResult() {
         }
 
         // Video Input Mode
-        else if (ui->com_cam_input_select->currentText().toStdString() == VIDEO_TEXT){
+        else if (ui->com_cam_input_select->currentText().toStdString() == SINGLE_VIDEO_TEXT || ui->com_cam_input_select->currentText().toStdString() == VIDEO_FOLDER_TEXT){
             if(!m_videoInputCap.isOpened()){
                 qDebug() << "Video capture is not opened.";
                 return;
@@ -2030,6 +2050,11 @@ void MainWindow::on_btn_img_mode_clicked()
     //on_btn_cam_stop_clicked();
     //on_btn_img_stop_clicked();
 
+    if(ui->com_video_list->isVisible()){
+        ui->com_video_list->clear();
+        ui->com_video_list->hide();
+    }
+
     ui->Mode_Setting_Stack->setCurrentIndex(1);
 }
 
@@ -2059,7 +2084,7 @@ void MainWindow::on_btn_cam_select_clicked()
     }
 
     // Video Input
-    else if (ui->com_cam_input_select->currentText().toStdString() == VIDEO_TEXT){
+    else if (ui->com_cam_input_select->currentText().toStdString() == SINGLE_VIDEO_TEXT){
         if(m_videoInputCap.isOpened()){
             m_videoInputCap.release();
         }
@@ -2080,23 +2105,65 @@ void MainWindow::on_btn_cam_select_clicked()
         m_videoInputCap.open(video_filepath.toLocal8Bit().constData(), cv::CAP_MSMF);
 
         if(!m_videoInputCap.isOpened()){
-            qDebug() << "Failed to open the video file.";
-            return;
-        }
-        bool ok;
-        int fps = QInputDialog::getInt(this, "Select Video Frame Rate",
-                                       "FPS (0 < fps <= 100): ", 10, 1, 100, 10, &ok);
-        if(ok){
-            frameRate = fps;
-            qDebug() << "Frame Rate: " << QString::number(fps);
-        }
-        else{
-            frameRate = 10;
-            qDebug() << "Frame Rate: " << QString::number(fps);
+            QMessageBox::information(this,
+                                     "Notification",
+                                     "Sorry. The video file is corupted.",
+                                     QMessageBox::Ok);
+            m_videoInputCap.release();
             return;
         }
 
-        //        m_videoInputCap.set(cv::CAP_PROP_FPS, fps);
+        showResult();
+        setCamControlEnabled(true);
+        on_btn_cam_play_clicked();
+    }
+
+    else if(ui->com_cam_input_select->currentText().toStdString() == VIDEO_FOLDER_TEXT){
+        if(m_videoInputCap.isOpened()){
+            m_videoInputCap.release();
+        }
+
+        QString dir = QFileDialog::getExistingDirectory(this,
+                                                        tr("Open Directory"),
+                                                        "/home",
+                                                        QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+        if(dir.isEmpty()){
+            QMessageBox::information(this,
+                                     "Notification",
+                                     "No folder was selected",
+                                     QMessageBox::Ok);
+            return;
+        }
+
+        QDirIterator itr(dir,
+                         {"*.mp4", "*.avi"},
+                         QDir::Files,
+                         QDirIterator::Subdirectories);
+
+        video_list.clear();
+        ui->com_video_list->clear();
+        ui->com_video_list->setVisible(true);
+
+        QString video_path, video_name;
+        while(itr.hasNext()){
+            video_path = itr.next();
+            video_name = video_path.split("/").last();
+            video_list.append(video_path);
+            ui->com_video_list->addItem(video_name);
+        }
+
+        QString cur_video_path = video_list[ui->com_video_list->currentIndex()];
+
+        m_videoInputCap.open(cur_video_path.toLocal8Bit().constData(), cv::CAP_MSMF);
+
+        if(!m_videoInputCap.isOpened()){
+            QMessageBox::information(this,
+                                     "Notification",
+                                     "Sorry. The video file is corrupted.",
+                                     QMessageBox::Ok);
+            m_videoInputCap.release();
+            return;
+        }
 
         showResult();
         setCamControlEnabled(true);
@@ -2114,10 +2181,18 @@ void MainWindow::on_btn_cam_play_clicked()
         return;
     }
 
-    // Video Input mode
+    //Video Mode
     if(video_mode_flag && !m_videoInputCap.isOpened()){
-        qDebug() << "Video mode but capture is not open.";
-        return;
+        // video folder mode
+        QString current_mode = ui->com_cam_input_select->currentText();
+        if(current_mode.toStdString() == VIDEO_FOLDER_TEXT){
+            on_com_video_list_currentTextChanged(ui->com_video_list->currentText());
+        }
+
+        else{
+            qDebug() << "Video mode but capture is not open.";
+            return;
+        }
     }
 
     if (m_timer.use_count() <= 0) { // First Connect with showResult()
@@ -2180,6 +2255,8 @@ void MainWindow::on_btn_cam_play_clicked()
     ui->btn_img_mode->setEnabled(false);
     ui->btn_select_single_mode->setEnabled(false);
     ui->btn_select_ensmble_mode->setEnabled(false);
+
+    ui->com_video_list->setEnabled(false);
 }
 
 void MainWindow::on_btn_cam_pause_clicked()
@@ -2224,7 +2301,9 @@ void MainWindow::on_btn_cam_stop_clicked()
     }
 
     setCamSelectEnabled(true);
-    setCamControlEnabled(false);
+    if(ui->com_cam_input_select->currentText().toStdString() != VIDEO_FOLDER_TEXT){
+        setCamControlEnabled(false);
+    }
     setCamSaveEditEnabled(true);
 
     ui->lab_result_info->setText("There is no table to show.");
@@ -2236,7 +2315,7 @@ void MainWindow::on_btn_cam_stop_clicked()
 
     ui->btn_img_mode->setEnabled(true);
 
-    if (m_nrt->get_model_status() == nrt::STATUS_SUCCESS && m_nrt->get_model_type() == "OCR") {
+    if (m_nrt.use_count() > 0 && m_nrt->get_model_status() == nrt::STATUS_SUCCESS && m_nrt->get_model_type() == "OCR") {
         for (int r = 0; r < ui->tableWidget_class->rowCount(); r++) {
             int colCount = ui->tableWidget_class->columnCount();
             if ((r == 3) || (r == 6))
@@ -2271,6 +2350,8 @@ void MainWindow::on_btn_cam_stop_clicked()
     ui->rad_cam_rtmode->setEnabled(true);
     ui->btn_select_single_mode->setEnabled(true);
     ui->btn_select_ensmble_mode->setEnabled(true);
+
+    ui->com_video_list->setEnabled(true);
 }
 
 void MainWindow::on_btn_img_input_clicked()
@@ -2404,7 +2485,7 @@ void MainWindow::on_btn_img_play_clicked()
             }
         }
 
-        if (m_nrt->get_model_status() != nrt::STATUS_SUCCESS) {
+        if (m_nrt.use_count()>0 && m_nrt->get_model_status() != nrt::STATUS_SUCCESS) {
             qDebug() << "NRT) There is no model";
             err_msg->critical(0,"Error", "Please choose model to inference.");
             return;
@@ -2524,7 +2605,7 @@ void MainWindow::on_btn_img_stop_clicked()
     ui->edit_show_class->setText("");
     ui->edit_show_inf->setText("");
 
-    if (m_nrt->get_model_status() == nrt::STATUS_SUCCESS && m_nrt->get_model_type() == "OCR") {
+    if (m_nrt.use_count()>0 && m_nrt->get_model_status() == nrt::STATUS_SUCCESS && m_nrt->get_model_type() == "OCR") {
         for (int r = 0; r < ui->tableWidget_class->rowCount(); r++) {
             int colCount = ui->tableWidget_class->columnCount();
             if ((r == 3) || (r == 6))
@@ -2560,16 +2641,56 @@ void MainWindow::on_spb_img_cur_idx_valueChanged(int cur_idx)
 }
 
 void MainWindow::on_com_cam_input_select_currentTextChanged(const QString &text){
-    if(text.toStdString() == VIDEO_TEXT){
+    if(text.toStdString() == SINGLE_VIDEO_TEXT){
         video_mode_flag = true;
         cam_mode_flag = false;
         ui->btn_cam_select->setText("Select Video File");
+        if(ui->com_video_list->isEnabled()){
+            video_list.clear();
+            ui->com_video_list->clear();
+            ui->com_video_list->hide();
+        }
+    }
+    else if(text.toStdString() == VIDEO_FOLDER_TEXT){
+        video_mode_flag = true;
+        cam_mode_flag = false;
+        ui->btn_cam_select->setText("Select Video Folder");
     }
     else if(text.toStdString() == CAMERA_TEXT){
         video_mode_flag = false;
         cam_mode_flag = true;
         ui->btn_cam_select->setText("Select Camera");
+        if(ui->com_video_list->isEnabled()){
+            video_list.clear();
+            ui->com_video_list->clear();
+            ui->com_video_list->hide();
+        }
     }
+}
+
+void MainWindow::on_com_video_list_currentTextChanged(const QString& text){
+    if(text.isEmpty()){
+        return;
+    }
+
+    if(m_videoInputCap.isOpened()){
+        m_videoInputCap.release();
+    }
+
+    QString cur_video_path = video_list[ui->com_video_list->currentIndex()];
+    m_videoInputCap.open(cur_video_path.toLocal8Bit().constData(), cv::CAP_MSMF);
+    if(!m_videoInputCap.isOpened()){
+        QMessageBox::information(this,
+                                 "Notification",
+                                 "Sorry. The video file is corupted.",
+                                 QMessageBox::Ok);
+        m_videoInputCap.release();
+        return;
+    }
+
+    showResult();
+    setCamControlEnabled(true);
+    on_btn_cam_play_clicked();
 }
 
 void MainWindow::setInfMode(int infMode){
