@@ -123,7 +123,7 @@
          </property>
          <property name="font">
           <font>
-           <family>Loma</family>
+           <family>Ubuntu</family>
            <pointsize>25</pointsize>
            <weight>75</weight>
            <italic>false</italic>
@@ -408,6 +408,7 @@
                   </property>
                   <property name="font">
                    <font>
+                    <family>Ubuntu</family>
                     <pointsize>12</pointsize>
                    </font>
                   </property>
@@ -471,6 +472,7 @@
                   </property>
                   <property name="font">
                    <font>
+                    <family>Ubuntu</family>
                     <pointsize>38</pointsize>
                    </font>
                   </property>
@@ -544,6 +546,7 @@
                   </property>
                   <property name="font">
                    <font>
+                    <family>Ubuntu</family>
                     <pointsize>38</pointsize>
                    </font>
                   </property>
@@ -746,6 +749,11 @@
                            <verstretch>0</verstretch>
                           </sizepolicy>
                          </property>
+                         <property name="font">
+                          <font>
+                           <family>Ubuntu</family>
+                          </font>
+                         </property>
                         </widget>
                        </item>
                        <item>
@@ -755,6 +763,11 @@
                            <horstretch>3</horstretch>
                            <verstretch>0</verstretch>
                           </sizepolicy>
+                         </property>
+                         <property name="font">
+                          <font>
+                           <family>Ubuntu</family>
+                          </font>
                          </property>
                          <property name="text">
                           <string/>
@@ -824,6 +837,11 @@
                           </property>
                           <item>
                            <widget class="QWidget" name="Realtime_Mode" native="true">
+                            <property name="font">
+                             <font>
+                              <family>Ubuntu</family>
+                             </font>
+                            </property>
                             <layout class="QHBoxLayout" name="horizontalLayout_23">
                              <property name="spacing">
                               <number>6</number>
@@ -860,6 +878,11 @@
                                  <horstretch>2</horstretch>
                                  <verstretch>0</verstretch>
                                 </sizepolicy>
+                               </property>
+                               <property name="font">
+                                <font>
+                                 <family>Ubuntu</family>
+                                </font>
                                </property>
                                <property name="text">
                                 <string>Auto Save Inference Results</string>
@@ -1380,16 +1403,22 @@
                  <widget class="QLabel" name="lab_model_topbar">
                   <property name="font">
                    <font>
+                    <family>Ubuntu</family>
                     <pointsize>15</pointsize>
                    </font>
                   </property>
                   <property name="text">
-                   <string>Model</string>
+                   <string>Execute</string>
                   </property>
                  </widget>
                 </item>
                 <item>
                  <widget class="QPushButton" name="btn_select_single_mode">
+                  <property name="font">
+                   <font>
+                    <family>Ubuntu</family>
+                   </font>
+                  </property>
                   <property name="text">
                    <string>Single Mode</string>
                   </property>
@@ -1397,6 +1426,11 @@
                 </item>
                 <item>
                  <widget class="QPushButton" name="btn_select_ensmble_mode">
+                  <property name="font">
+                   <font>
+                    <family>Ubuntu</family>
+                   </font>
+                  </property>
                   <property name="text">
                    <string>Ensmble Mode</string>
                   </property>
@@ -1404,6 +1438,11 @@
                 </item>
                 <item>
                  <widget class="QCheckBox" name="cbx_select_fp16">
+                  <property name="font">
+                   <font>
+                    <family>Ubuntu</family>
+                   </font>
+                  </property>
                   <property name="toolTip">
                    <string/>
                   </property>
@@ -1457,7 +1496,7 @@
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                     <horstretch>0</horstretch>
-                    <verstretch>2</verstretch>
+                    <verstretch>1</verstretch>
                    </sizepolicy>
                   </property>
                   <property name="currentIndex">
@@ -1498,10 +1537,16 @@
                        <item>
                         <widget class="QLabel" name="lab_pro_device">
                          <property name="sizePolicy">
-                          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                          <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                            <horstretch>1</horstretch>
                            <verstretch>0</verstretch>
                           </sizepolicy>
+                         </property>
+                         <property name="font">
+                          <font>
+                           <family>Ubuntu</family>
+                           <pointsize>11</pointsize>
+                          </font>
                          </property>
                          <property name="text">
                           <string>Device</string>
@@ -1518,6 +1563,9 @@
                          </property>
                          <property name="text">
                           <string/>
+                         </property>
+                         <property name="alignment">
+                          <set>Qt::AlignCenter</set>
                          </property>
                         </widget>
                        </item>
@@ -1542,13 +1590,19 @@
                        <item>
                         <widget class="QLabel" name="lab_pro_name">
                          <property name="sizePolicy">
-                          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                          <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                            <horstretch>1</horstretch>
                            <verstretch>0</verstretch>
                           </sizepolicy>
                          </property>
+                         <property name="font">
+                          <font>
+                           <family>Ubuntu</family>
+                           <pointsize>11</pointsize>
+                          </font>
+                         </property>
                          <property name="text">
-                          <string>Name</string>
+                          <string>Model</string>
                          </property>
                         </widget>
                        </item>
@@ -1564,195 +1618,19 @@
                           <string/>
                          </property>
                          <property name="alignment">
-                          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                         </property>
-                        </widget>
-                       </item>
-                      </layout>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QWidget" name="Proper_Type" native="true">
-                      <layout class="QHBoxLayout" name="horizontalLayout_10">
-                       <property name="spacing">
-                        <number>0</number>
-                       </property>
-                       <property name="topMargin">
-                        <number>0</number>
-                       </property>
-                       <property name="rightMargin">
-                        <number>0</number>
-                       </property>
-                       <property name="bottomMargin">
-                        <number>0</number>
-                       </property>
-                       <item>
-                        <widget class="QLabel" name="lab_pro_type">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                           <horstretch>1</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="text">
-                          <string>Model Type</string>
+                          <set>Qt::AlignCenter</set>
                          </property>
                         </widget>
                        </item>
                        <item>
-                        <widget class="QLabel" name="lab_model_type">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                           <horstretch>3</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
+                        <widget class="QPushButton" name="btn_model_settings">
+                         <property name="font">
+                          <font>
+                           <family>Ubuntu</family>
+                          </font>
                          </property>
                          <property name="text">
-                          <string/>
-                         </property>
-                         <property name="alignment">
-                          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                         </property>
-                        </widget>
-                       </item>
-                      </layout>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QWidget" name="Proper_TrainingType" native="true">
-                      <layout class="QHBoxLayout" name="horizontalLayout_11">
-                       <property name="spacing">
-                        <number>0</number>
-                       </property>
-                       <property name="topMargin">
-                        <number>0</number>
-                       </property>
-                       <property name="rightMargin">
-                        <number>0</number>
-                       </property>
-                       <property name="bottomMargin">
-                        <number>0</number>
-                       </property>
-                       <item>
-                        <widget class="QLabel" name="lab_pro_trainingtype">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                           <horstretch>1</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="text">
-                          <string>Training Type</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLabel" name="lab_model_trainingtype">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                           <horstretch>3</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="text">
-                          <string/>
-                         </property>
-                         <property name="alignment">
-                          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                         </property>
-                        </widget>
-                       </item>
-                      </layout>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QWidget" name="Proper_Search" native="true">
-                      <layout class="QHBoxLayout" name="horizontalLayout_12">
-                       <property name="spacing">
-                        <number>0</number>
-                       </property>
-                       <property name="topMargin">
-                        <number>0</number>
-                       </property>
-                       <property name="rightMargin">
-                        <number>0</number>
-                       </property>
-                       <property name="bottomMargin">
-                        <number>0</number>
-                       </property>
-                       <item>
-                        <widget class="QLabel" name="lab_pro_search">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                           <horstretch>1</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="text">
-                          <string>Search Space</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLabel" name="lab_model_search">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                           <horstretch>3</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="text">
-                          <string/>
-                         </property>
-                         <property name="alignment">
-                          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                         </property>
-                        </widget>
-                       </item>
-                      </layout>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QWidget" name="Proper_Inference" native="true">
-                      <layout class="QHBoxLayout" name="horizontalLayout_13">
-                       <property name="spacing">
-                        <number>0</number>
-                       </property>
-                       <property name="topMargin">
-                        <number>0</number>
-                       </property>
-                       <property name="rightMargin">
-                        <number>0</number>
-                       </property>
-                       <property name="bottomMargin">
-                        <number>0</number>
-                       </property>
-                       <item>
-                        <widget class="QLabel" name="lab_pro_inference">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                           <horstretch>1</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="text">
-                          <string>Inference Speed</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLabel" name="lab_model_inference">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                           <horstretch>3</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="text">
-                          <string/>
-                         </property>
-                         <property name="alignment">
-                          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                          <string>Settings</string>
                          </property>
                         </widget>
                        </item>
@@ -1776,6 +1654,7 @@
                      <widget class="QLabel" name="lab_model_status">
                       <property name="font">
                        <font>
+                        <family>Ubuntu</family>
                         <pointsize>13</pointsize>
                        </font>
                       </property>
@@ -1799,7 +1678,7 @@
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                     <horstretch>0</horstretch>
-                    <verstretch>3</verstretch>
+                    <verstretch>4</verstretch>
                    </sizepolicy>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_12">
@@ -1840,19 +1719,6 @@
                        <number>2</number>
                       </property>
                       <item>
-                       <widget class="QLabel" name="lab_class_list">
-                        <property name="sizePolicy">
-                         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                          <horstretch>0</horstretch>
-                          <verstretch>1</verstretch>
-                         </sizepolicy>
-                        </property>
-                        <property name="text">
-                         <string>Class List</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item>
                        <spacer name="spa_model_class">
                         <property name="orientation">
                          <enum>Qt::Horizontal</enum>
@@ -1869,20 +1735,86 @@
                     </widget>
                    </item>
                    <item>
-                    <widget class="QTableWidget" name="tableWidget_class">
-                     <property name="showGrid">
-                      <bool>false</bool>
-                     </property>
-                     <attribute name="horizontalHeaderCascadingSectionResizes">
-                      <bool>false</bool>
-                     </attribute>
-                     <attribute name="horizontalHeaderStretchLastSection">
-                      <bool>false</bool>
-                     </attribute>
-                     <attribute name="verticalHeaderStretchLastSection">
-                      <bool>false</bool>
-                     </attribute>
-                    </widget>
+                    <layout class="QHBoxLayout" name="Inf_Results_HBox">
+                     <item>
+                      <widget class="QChartView" name="inf_chart_view">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+                         <horstretch>1</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QWidget" name="inf_numbers" native="true">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                         <horstretch>1</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                       <layout class="QVBoxLayout" name="verticalLayout_16">
+                        <item>
+                         <layout class="QHBoxLayout" name="hlayout_model1">
+                          <item>
+                           <widget class="QLabel" name="lab_model1">
+                            <property name="font">
+                             <font>
+                              <family>Ubuntu</family>
+                              <pointsize>10</pointsize>
+                             </font>
+                            </property>
+                            <property name="text">
+                             <string>Model 1 predicted Class:</string>
+                            </property>
+                           </widget>
+                          </item>
+                         </layout>
+                        </item>
+                        <item>
+                         <widget class="QTableWidget" name="table_model1_class_probs"/>
+                        </item>
+                        <item>
+                         <spacer name="verticalSpacer_2">
+                          <property name="orientation">
+                           <enum>Qt::Vertical</enum>
+                          </property>
+                          <property name="sizeHint" stdset="0">
+                           <size>
+                            <width>20</width>
+                            <height>40</height>
+                           </size>
+                          </property>
+                         </spacer>
+                        </item>
+                        <item>
+                         <layout class="QHBoxLayout" name="horizontalLayout_10">
+                          <item>
+                           <widget class="QLabel" name="lab_model2">
+                            <property name="font">
+                             <font>
+                              <family>Ubuntu</family>
+                              <pointsize>10</pointsize>
+                              <italic>false</italic>
+                              <underline>false</underline>
+                              <strikeout>false</strikeout>
+                             </font>
+                            </property>
+                            <property name="text">
+                             <string>Model 2 predicted Class: </string>
+                            </property>
+                           </widget>
+                          </item>
+                         </layout>
+                        </item>
+                        <item>
+                         <widget class="QTableWidget" name="table_model2_class_probs"/>
+                        </item>
+                       </layout>
+                      </widget>
+                     </item>
+                    </layout>
                    </item>
                   </layout>
                  </widget>
@@ -1903,6 +1835,13 @@
   </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
+ <customwidgets>
+  <customwidget>
+   <class>QChartView</class>
+   <extends>QGraphicsView</extends>
+   <header>QtCharts</header>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="qtresource.qrc"/>
  </resources>

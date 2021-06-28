@@ -49,22 +49,25 @@
 #include <QUuid>
 #include <QInputDialog>
 #include <QSqlTableModel>
+
 #include <QFormLayout>
 #include <QDialogButtonBox>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
-#include <QJsonParseError>
 #include <QByteArray>
 #include <QSizePolicy>
+#include <QPair>
 
-#include <opencv2/highgui.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/videoio/registry.hpp>
-using namespace cv;
+#include <QtCharts/QChartView>
+#include <QtCharts/QBarSeries>
+#include <QtCharts/QBarSet>
+#include <QtCharts/QLegend>
+#include <QtCharts/QBarCategoryAxis>
+#include <QtCharts/QValueAxis>
 
-//#include <pthread.h>
+QT_CHARTS_USE_NAMESPACE
+
 #include <thread>
 #include <mutex>
 #include <memory>
@@ -72,7 +75,6 @@ using namespace cv;
 #include <queue>
 #include <chrono>
 #include <stdio.h>
-//#include <unistd.h>
 #include <stdlib.h>
 #include <string>
 #include <sys/stat.h>
@@ -82,7 +84,10 @@ using namespace cv;
 #include <regex>
 using namespace std;
 
-//#include <sqlite3.h>
-
+#include <windows.h>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/videoio/registry.hpp>
 
 #endif // QT_UTIL_H

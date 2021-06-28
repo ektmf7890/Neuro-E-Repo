@@ -1,13 +1,10 @@
 #ifndef USBCAM_H
 #define USBCAM_H
-#include "shared_include.h"
-#include <QLabel>
+
 #include <QImage>
 #include <QPixmap>
-#include <QPair>
+#include "shared_include.h"
 
-#include <opencv2/highgui.hpp>
-#include <opencv2/imgproc.hpp>
 using namespace cv;
 
 class UsbCam

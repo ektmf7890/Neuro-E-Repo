@@ -56,7 +56,10 @@ public:
     nrt::NDBufferList execute(nrt::NDBuffer resized_img_buffer);
 
     int PROB_IDX = -1, PRED_IDX = -1, CAM_IDX = -1, ANO_IDX = -1, ROT_IDX=-1;
-    std::vector<float> class_threshold;
+
+    QVector<float> prob_threshold;
+    QVector<QPair<int, int>> size_threshold;
+    QVector<QString> size_thres_conjunction;
 };
 
 

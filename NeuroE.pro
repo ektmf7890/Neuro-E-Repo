@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui multimedia multimediawidgets sql
+QT       += core gui multimedia multimediawidgets sql charts
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -48,13 +48,15 @@ RESOURCES += \
 FORMS += \
         mainwindow.ui
 
-INCLUDEPATH += C:\\opencv\build\install\include
+INCLUDEPATH += C:\\opencv\include
 
 INCLUDEPATH += C:\\nrt\include
 
-LIBS += -LC:\\opencv\build\install\x64\vc16\lib \
-#        -lopencv_world452 \
+Debug: LIBS += -LC:\\opencv\x64\vc16\lib \
         -lopencv_world452d
+
+Release: LIBS += -LC:\\opencv\x64\vc16\lib\
+        -lopencv_world452
 
 LIBS += -LC:\\nrt\lib\release \
         -lnrt

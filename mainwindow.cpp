@@ -125,9 +125,10 @@ MainWindow::MainWindow(QWidget *parent) :
     setCamControlEnabled(false);
 
     // CAM Select ComboBox
-    camType.append(QString::fromStdString(CAMERA_TEXT));
     camType.append(QString::fromStdString(SINGLE_VIDEO_TEXT));
     camType.append(QString::fromStdString(VIDEO_FOLDER_TEXT));
+    camType.append(QString::fromStdString(CAMERA_TEXT));
+
     ui->com_cam_input_select->addItems(camType);
     if(ui->com_cam_input_select->currentText().toStdString() == SINGLE_VIDEO_TEXT){
         ui->btn_cam_select->setText("Select Video File");
@@ -170,7 +171,6 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->cbx_select_fp16->setToolTip("Slower when creating Executor, but Faster when predicting Img");
     ui->cbx_select_fp16->setWhatsThis("Slower when creating Executor, but Faster when predicting Img");
     ui->lab_model_status->setAlignment(Qt::AlignCenter);
-    setModelInfo(false, "");
 
     QSqlError err = m_db->InitialDBSetup();
     if(err.type() != QSqlError::NoError){
@@ -190,6 +190,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->com_video_list->hide();
     ui->com_video_list->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    ui->inf_numbers->hide();
+
+    ui->btn_model_settings->hide();
 }
 
 MainWindow::~MainWindow()
@@ -490,397 +493,6 @@ void MainWindow::resultVerClicked(int row) {
     ui->lab_show_res->setPixmap(m_qpixmap.scaled(ui->lab_show_res->width(), ui->lab_show_res->height(), Qt::KeepAspectRatio));
 }
 
-void MainWindow::setModelInfo(bool flag, QString model_name) {
-    // Model Info를 지우고 Please Select Model 을 표시하고 싶을 때
-    if (flag == false) {
-        // 0: Model Info Page, 1: Model Status Page
-        if ( ui->Model_Proper->currentIndex() == 0 ) {  // Info Page -> Status Page
-            ui->Model_Proper->setCurrentWidget(ui->Model_Status_Page);
-            ui->lab_model_status->setText("Please Select Model.");
-        }
-        return;
-    }
-
-    // Model Info를 표시하고 싶을 때 -> model 상태 확인
-    else if (m_nrt.use_count() > 0 && m_nrt->get_model_status() == nrt::STATUS_SUCCESS) {
-        if( ui->Model_Proper->currentIndex() == 1 ) { // Status Page -> Info Page
-            ui->Model_Proper->setCurrentWidget(ui->Model_Info_Page);
-        }
-
-        ui->lab_device->setText(m_nrt->get_gpu_name());
-        // Model Name Issue
-        ui->lab_model_name->setText(model_name);
-        ui->lab_model_type ->setText(m_nrt->get_model_type());
-        ui->lab_model_trainingtype->setText(m_nrt->get_model_training_type());
-        ui->lab_model_search->setText(m_nrt->get_model_search_level());
-
-        // Fast가 아닐 때만 ui에 inference speed 표시
-        if (m_nrt->get_model_search_level() != QString("Fast")) {
-            ui->Proper_Inference->show();
-            ui->lab_model_inference->setText(m_nrt->get_model_inference_level());
-        }
-        else
-            ui->Proper_Inference->hide();
-
-        // Class Table
-        setClassTable(flag);
-    }
-
-    class_table_availbale = true;
-}
-
-void MainWindow::setClassTable(bool flag) {
-    // tableWidget_class: 오른쪽 하단 class 보여주는 table
-    disconnect(ui->tableWidget_class, SIGNAL(cellDoubleClicked(int,int)), this, SLOT(tableItemClicked(int,int)));
-    disconnect(ui->tableWidget_class, SIGNAL(cellChanged(int,int)), this, SLOT(tableItemChanged(int,int)));
-
-    ui->tableWidget_class->clear();
-    ui->tableWidget_class->horizontalHeader()->hide();
-
-    if (!flag)
-        return;
-
-    QString model_type = m_nrt->get_model_type();
-    int COLOR_COL = 0, NAME_COL = 1;
-    int START_POINT;
-    if (model_type == "Classification" || model_type == "Anomaly")
-        START_POINT = 0;
-    else if (model_type == "Segmentation" || model_type == "Detection")
-        START_POINT = 1;
-
-    // Set Horizental Header
-    ui->tableWidget_class->verticalHeader()->hide();
-    ui->tableWidget_class->horizontalHeader()->show();
-    if (model_type != "OCR")
-        ui->edit_show_class->setFont(QFont("Ubuntu", 23, 1, false));
-    QStringList horHeaderLabels;
-    if (model_type == "Classification") {
-        ui->tableWidget_class->setRowCount(m_nrt->get_model_class_num() - START_POINT);
-        ui->tableWidget_class->setColumnCount(3);
-        horHeaderLabels = QStringList() << "Color" << "Name" << "Prob. Thres.";
-        ui->tableWidget_class->setHorizontalHeaderLabels(horHeaderLabels);
-    }
-    else if (model_type == "Segmentation") {
-        ui->tableWidget_class->setRowCount(m_nrt->get_model_class_num() - START_POINT);
-        ui->tableWidget_class->setColumnCount(6);
-        horHeaderLabels = QStringList() << "Color" << "Name" << "Width" << "AND/OR" << "Height" << "Prob. Thres.";
-        ui->tableWidget_class->setHorizontalHeaderLabels(horHeaderLabels);
-    }
-    else if (model_type == "Detection") {
-        ui->edit_show_class->setFont(QFont("Ubuntu", 14, 2, false));
-        ui->tableWidget_class->setRowCount(m_nrt->get_model_class_num() - START_POINT);
-        ui->tableWidget_class->setColumnCount(6);
-        horHeaderLabels = QStringList() << "Color" << "Name" << "Width" << "AND/OR" << "Height" << "Prob. Thres";
-        ui->tableWidget_class->setHorizontalHeaderLabels(horHeaderLabels);
-    }
-    else if (model_type == "OCR") {
-    }
-    else if (model_type == "Anomaly") {
-        ui->tableWidget_class->setRowCount(m_nrt->get_model_class_num() - START_POINT);
-        ui->tableWidget_class->setColumnCount(3);
-        horHeaderLabels = QStringList() << "Color" << "Name" << "Sensitivity";
-        ui->tableWidget_class->setHorizontalHeaderLabels(horHeaderLabels);
-    }
-    else {
-        qDebug() << "Set class table error! (Model Type Error)";
-        return;
-    }
-    ui->tableWidget_class->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-
-    // Set Color Item (Column = 0)
-    COLOR_VECTOR.clear();
-    if (model_type == "Classification" || model_type == "Segmentation") {
-        int row_cnt = ui->tableWidget_class->rowCount();
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<int> dis(0, 255);
-        dis(gen);
-
-        ui->tableWidget_class->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
-        for (int i = 0; i < row_cnt; i++) {
-            QWidget* cWidget = new QWidget();
-            QLabel* lab_color = new QLabel();
-            QColor new_color = QColor(dis(gen), dis(gen), dis(gen));
-            if (i == 0)
-                new_color = QColor(255, 0, 0);
-            QVariant cVariant = new_color;
-            QString cString = cVariant.toString();
-            lab_color->setStyleSheet("background-color:"+cString+";");
-            lab_color->setAlignment(Qt::AlignTop | Qt::AlignLeft);
-            lab_color->setContentsMargins(0,0,0,0);
-            lab_color->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
-            QHBoxLayout* cLayout = new QHBoxLayout(cWidget);
-            cLayout->addWidget(lab_color);
-            cLayout->setAlignment(Qt::AlignCenter);
-            cLayout->setContentsMargins(30, 2, 30, 2);
-            cWidget->setLayout(cLayout);
-            ui->tableWidget_class->setCellWidget(i, COLOR_COL, cWidget);
-            COLOR_VECTOR.append(new_color);
-        }
-    }
-    else if (model_type == "Detection") {int row_cnt = ui->tableWidget_class->rowCount();
-        ui->tableWidget_class->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
-        for (int i = 0; i < row_cnt; i++) {
-            QWidget* cWidget = new QWidget();
-            QLabel* lab_color = new QLabel();
-            QColor new_color = QColor(0, 0, 0);
-            if (i == 0) // green spray
-                new_color = QColor(0, 204, 0);
-            else if (i == 1) // purple
-                new_color = QColor(153, 0, 255);
-            else if (i == 2) // pill
-                new_color = QColor(255, 0, 0);
-            else if (i == 3) // white
-                new_color = QColor(220, 220, 220);
-            else if (i == 4) // pink
-                new_color = QColor(255, 51, 153);
-            else if (i == 5) // tissue
-                new_color = QColor(0, 0, 0);
-            else if (i == 6) // blue
-                new_color = QColor(0, 0, 255);
-            QVariant cVariant = new_color;
-            QString cString = cVariant.toString();
-            lab_color->setStyleSheet("background-color:"+cString+";");
-            lab_color->setAlignment(Qt::AlignTop | Qt::AlignLeft);
-            lab_color->setContentsMargins(0,0,0,0);
-            lab_color->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
-            QHBoxLayout* cLayout = new QHBoxLayout(cWidget);
-            cLayout->addWidget(lab_color);
-            cLayout->setAlignment(Qt::AlignCenter);
-            cLayout->setContentsMargins(30, 2, 30, 2);
-            cWidget->setLayout(cLayout);
-            ui->tableWidget_class->setCellWidget(i, COLOR_COL, cWidget);
-            COLOR_VECTOR.append(new_color);
-        }
-    }
-    else if (model_type == "Anomaly") {
-        for (int i = 0; i < 2; i++) {
-            QWidget* cWidget = new QWidget();
-            QLabel* lab_color = new QLabel();
-            QColor new_color = ((i == 0) ? QColor(6, 101, 210) : QColor(244, 67, 54));
-            QVariant cVariant = new_color;
-            QString cString = cVariant.toString();
-            lab_color->setStyleSheet("background-color:"+cString+";");
-            lab_color->setAlignment(Qt::AlignTop | Qt::AlignLeft);
-            lab_color->setContentsMargins(0,0,0,0);
-            lab_color->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
-            QHBoxLayout* cLayout = new QHBoxLayout(cWidget);
-            cLayout->addWidget(lab_color);
-            cLayout->setAlignment(Qt::AlignCenter);
-            cLayout->setContentsMargins(30, 2, 30, 2);
-            cWidget->setLayout(cLayout);
-            ui->tableWidget_class->setCellWidget(i, COLOR_COL, cWidget);
-            COLOR_VECTOR.append(new_color);
-        }
-    }
-    // Set OCR Char Classes
-    else if (model_type == "OCR") {
-        int OCR_COL_SIZE = 10, cur_start_row = 0, row, col;
-        ui->tableWidget_class->setRowCount(7);
-        ui->tableWidget_class->setColumnCount(OCR_COL_SIZE);
-        for (int i = 0; i <= 9; i++) {
-            row = i / OCR_COL_SIZE;
-            col = i % OCR_COL_SIZE;
-            QTableWidgetItem *newItem = new QTableWidgetItem(0);
-            newItem->setText(QString::number(i));
-            newItem->setTextAlignment(Qt::AlignCenter);
-            newItem->setFlags(newItem->flags() & ~Qt::ItemIsEditable);
-            ui->tableWidget_class->setItem(cur_start_row+row, col, newItem);
-        }
-        cur_start_row += (9 / OCR_COL_SIZE) + 1;
-        char alp = 'A';
-        for (int i = 0; i < 26; i++) {
-            row = i / OCR_COL_SIZE;
-            col = i % OCR_COL_SIZE;
-            QTableWidgetItem *newItem = new QTableWidgetItem(0);
-            newItem->setText(QString(alp));
-            newItem->setTextAlignment(Qt::AlignCenter);
-            newItem->setFlags(newItem->flags() & ~Qt::ItemIsEditable);
-            ui->tableWidget_class->setItem(cur_start_row+row, col, newItem);
-            alp++;
-        }
-        cur_start_row += (26 / OCR_COL_SIZE) + 1;
-        alp = 'a';
-        for (int i = 0; i < 26; i++) {
-            row = i / OCR_COL_SIZE;
-            col = i % OCR_COL_SIZE;
-            QTableWidgetItem *newItem = new QTableWidgetItem(0);
-            newItem->setText(QString(alp));
-            newItem->setTextAlignment(Qt::AlignCenter);
-            newItem->setFlags(newItem->flags() & ~Qt::ItemIsEditable);
-            ui->tableWidget_class->setItem(cur_start_row+row, col, newItem);
-            alp++;
-        }
-        ui->tableWidget_class->setShowGrid(true);
-        ui->tableWidget_class->resizeColumnsToContents();
-        ui->tableWidget_class->horizontalHeader()->hide();
-        ui->tableWidget_class->verticalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-//        ui->tableWidget_class->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-    }
-
-    // Set Name (Column = 1)
-    if (model_type == "Classification" || model_type == "Segmentation" || model_type == "Detection" || model_type == "Anomaly") {
-        for (int i = START_POINT; i < m_nrt->get_model_class_num(); i++) {
-            QTableWidgetItem *newItem = new QTableWidgetItem(0);
-            newItem->setText(m_nrt->get_model_class_name(i));
-            newItem->setTextAlignment(Qt::AlignCenter);
-            ui->tableWidget_class->setItem(i - START_POINT, NAME_COL, newItem);
-        }
-    }
-    else if (model_type == "OCR") {
-    }
-
-    /*
-    Set Size Threshold [Width, And/Or, Height] (Segmentation, Detection).
-        - Classification, OCR, Anomaly models do not have size thresholds.
-        - ui -> tableWidget_class
-        - Columns: SIZE_THRES_WIDTH_COL, SIZE_THRES_CONJ_COL, SIZE_THRES_HEIGHT_COL
-    */
-    if (model_type == "Segmentation" || model_type == "Detection") {
-        /*
-        get_model_size_threshold()
-            if size threshold was set during model training
-            returns NDBuffer -> dims[0]: class index, dims[1]: threshold valus for class
-
-            else
-            returns empty NDBuffer
-        */
-        nrt::NDBuffer size_threshold_buf = m_nrt->get_model_size_threshold();
-        nrt::Shape size_thres_shape = size_threshold_buf.get_shape();
-        // size threshold가 있는 모델이면 해당 값으로 treshold 값을 ui에 적음.
-        if (!size_threshold_buf.empty()) {
-            // size_thres_shape.dims[0] : number of classes that has size threshold values
-            for (int cls_idx = 0; cls_idx < size_thres_shape.dims[0]; cls_idx++) {
-                int height = *size_threshold_buf.get_at_ptr<int>(cls_idx, 0);
-                int width = *size_threshold_buf.get_at_ptr<int>(cls_idx, 1);
-                int conjunction = *size_threshold_buf.get_at_ptr<int>(cls_idx, 2);
-
-                for (int col = WIDTH_COL; col <= HEIGHT_COL; col++) {
-                    if (col != AND_OR_COL) {
-                        QTableWidgetItem *newItem = new QTableWidgetItem(0);
-                        newItem->setText(QString::number(((col != WIDTH_COL) ? width : height)));
-                        newItem->setTextAlignment(Qt::AlignCenter);
-                        ui->tableWidget_class->setItem(cls_idx, col, newItem);
-                    }
-                    else {
-                        QTableWidgetItem *newItem = new QTableWidgetItem(0);
-                        newItem->setText((conjunction == 0 ? "and" : "or"));
-                        newItem->setTextAlignment(Qt::AlignCenter);
-                        newItem->setFlags(newItem->flags() & ~Qt::ItemIsEditable);
-                        ui->tableWidget_class->setItem(cls_idx, col, newItem);
-                    }
-                }
-            }
-        }
-        else {
-            qDebug() << "No Size Threshold";
-            int row_cnt = ui->tableWidget_class->rowCount();
-            for (int i = 0; i < row_cnt; i++) {
-                for (int col = 2; col <= 4; col++) {
-                    if (col != 3) {
-                        QTableWidgetItem *newItem = new QTableWidgetItem(0);
-                        newItem->setText(QString::number(0));
-                        newItem->setTextAlignment(Qt::AlignCenter);
-                        ui->tableWidget_class->setItem(i, col, newItem);
-                    }
-                    else {
-                        QTableWidgetItem *newItem = new QTableWidgetItem(0);
-                        newItem->setText("and");
-                        newItem->setTextAlignment(Qt::AlignCenter);
-                        newItem->setFlags(newItem->flags() & ~Qt::ItemIsEditable);
-                        ui->tableWidget_class->setItem(i, col, newItem);
-                    }
-                }
-            }
-        }
-    }
-
-    // Set Probability Threshold (CLA) (Column = 2)
-    if (model_type == "Classification") {
-        nrt::NDBuffer prob_thres = m_nrt->get_model_prob_threshold();
-        nrt::Shape prob_thres_shape = prob_thres.get_shape();
-        if (!prob_thres.empty()) {
-            qDebug() << "CLA Probability Threshold";
-            for (int i = 0; i < prob_thres_shape.dims[0]; i++) {
-                float thres = *prob_thres.get_at_ptr<float>(i);
-                QTableWidgetItem *newItem = new QTableWidgetItem(0);
-                newItem->setText(QString::number(thres) + QString("%"));
-                newItem->setTextAlignment(Qt::AlignCenter);
-                ui->tableWidget_class->setItem(i, 2, newItem);
-            }
-        }
-        else {
-            qDebug() << "No Probability Threshold";
-            int row_cnt = ui->tableWidget_class->rowCount();
-            for (int i = 0; i < row_cnt; i++) {
-                QTableWidgetItem *newItem = new QTableWidgetItem(0);
-                newItem->setText(QString::number(0) + QString("%"));
-                newItem->setTextAlignment(Qt::AlignCenter);
-                ui->tableWidget_class->setItem(i, 2, newItem);
-            }
-        }
-    }
-    // Set Prob Threshold (SEG, DET) (Column = 5)
-    if (model_type == "Segmentation" || model_type == "Detection") {
-        int row_cnt = ui->tableWidget_class->rowCount();
-        for (int i = 0; i < row_cnt; i++) {
-            QTableWidgetItem *newItem = new QTableWidgetItem(0);
-            newItem->setText(QString::number(0) + QString("%"));
-            newItem->setTextAlignment(Qt::AlignCenter);
-            ui->tableWidget_class->setItem(i, 5, newItem);
-        }
-    }
-
-    // Set Sensitivity (ANO) (Column = 2)
-
-    // connect(sender, SIGNAL(destroyed(QObject*)), this, SLOT(objectDestroyed(QObject*)));
-    connect(ui->tableWidget_class, SIGNAL(cellClicked(int,int)), this, SLOT(tableItemClicked(int,int)));
-    connect(ui->tableWidget_class, SIGNAL(cellDoubleClicked(int,int)), this, SLOT(tableItemClicked(int,int)));
-    connect(ui->tableWidget_class, SIGNAL(cellChanged(int,int)), this, SLOT(tableItemChanged(int,int)));
-}
-
-void MainWindow::tableItemClicked(int row, int col) {
-    on_btn_cam_pause_clicked();
-    on_btn_img_pause_clicked();
-    QString model_type = m_nrt->get_model_type();
-    // Color Column = 0
-    if (model_type != "OCR" && col == 0) {
-        QColor new_color = QColorDialog::getColor(Qt::red, this);
-        if (new_color.isValid()) {
-            QWidget* cWidget = new QWidget();
-            QLabel* lab_color = new QLabel();
-            QVariant cVariant = new_color;
-            QString cString = cVariant.toString();
-            lab_color->setStyleSheet("background-color:"+cString+";");
-            lab_color->setAlignment(Qt::AlignTop | Qt::AlignLeft);
-            lab_color->setContentsMargins(0,0,0,0);
-            lab_color->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
-            QHBoxLayout* cLayout = new QHBoxLayout(cWidget);
-            cLayout->addWidget(lab_color);
-            cLayout->setAlignment(Qt::AlignCenter);
-            cLayout->setContentsMargins(30, 2, 30, 2);
-            cWidget->setLayout(cLayout);
-            ui->tableWidget_class->setCellWidget(row, 0, cWidget);
-            COLOR_VECTOR[row] = new_color;
-        }
-    }
-    // And/Or (SEG, DET Column = 3)
-    if ((model_type == "Segmentation" || model_type == "Detection") && col == 3) {
-        QString cur_txt = ui->tableWidget_class->item(row, col)->text();
-        ui->tableWidget_class->item(row, col)->setText((cur_txt == "and" ? "or" : "and"));
-    }
-}
-
-void MainWindow::tableItemChanged(int row, int col) {
-    // Detection Prob Edit
-    QString model_type = m_nrt->get_model_type();
-    if (((model_type == "Segmentation" || model_type == "Detection") && (col == 5)) || (model_type == "Classification" && (col == 2))) {
-        QString input = ui->tableWidget_class->item(row, col)->text();
-        if (input.at(input.length()-1) != QChar('%'))
-            ui->tableWidget_class->item(row, col)->setText(input + QString("%"));
-    }
-}
-
 /* Loop for Save Images */
 void MainWindow::save_worker() {
     QSqlDatabase save_thread_db = QSqlDatabase::addDatabase("QSQLITE", "save_thread");
@@ -1062,9 +674,15 @@ void MainWindow::claSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vec
         }
         QString pred_cla_name = m_nrt->get_model_class_name(pred_cla_idx);
 
-        int num_idx = ui->tableWidget_class->item(pred_cla_idx, NAME_COL+1)->text().size() - 1;
-        float cur_prob_thres = ui->tableWidget_class->item(pred_cla_idx, NAME_COL+1)->text().left(num_idx).toFloat();
-        qDebug() << ui->tableWidget_class->item(pred_cla_idx, NAME_COL+1)->text().left(num_idx) << cur_prob_thres;
+        //float cur_prob_thres = ui->tableWidget_class->item(pred_cla_idx, NAME_COL+1)->text().left(num_idx).toFloat();
+        float cur_prob_thres;
+        if(pred_cla_idx < m_nrt->prob_threshold.length()){
+            cur_prob_thres = m_nrt->prob_threshold[pred_cla_idx];
+        }
+        else{
+            qDebug() << "claSetResults) " << "prob_threshold vector out of range";
+            cur_prob_thres = 90;
+        }
 
         if ((cls_prob_vec[pred_cla_idx] * 100) < cur_prob_thres)
             pred_cla_name = QString("Unknown");
@@ -1106,13 +724,13 @@ void MainWindow::segSetResults(nrt::NDBuffer merged_pred_output, cv::Mat &PRED_I
             size_threshold_buf = nrt::NDBuffer::zeros(nrt::Shape(m_nrt->get_model_class_num(), 3), nrt::DTYPE_INT32);
             int* thres_ptr = size_threshold_buf.get_at_ptr<int>();
 
-            for (int i = 0; i < ui->tableWidget_class->rowCount(); i++) {
-                if(ui->tableWidget_class->item(i, HEIGHT_COL) && ui->tableWidget_class->item(i, WIDTH_COL) && ui->tableWidget_class->item(i, AND_OR_COL)) {
-                    thres_ptr[3*(i+1) + 0] = ui->tableWidget_class->item(i, HEIGHT_COL)->text().toInt();
-                    thres_ptr[3*(i+1) + 1] = ui->tableWidget_class->item(i, WIDTH_COL)->text().toInt();
-                    thres_ptr[3*(i+1) + 2] = (ui->tableWidget_class->item(i, AND_OR_COL)->text() == "and" ? 0 : 1);
-                    //qDebug() << QString::number(thres_ptr[3*(i+1) + 0]) << QString::number(thres_ptr[3*(i+1) + 1]) << QString::number(thres_ptr[3*(i+1) + 2]);
-                }
+            for(int i = 0; i < m_nrt->get_model_class_num(); i++){
+              int height = m_nrt->size_threshold[i].first;
+              int width = m_nrt->size_threshold[i].second;
+              int conjunction = m_nrt->size_thres_conjunction[i] == "AND" ? 0 : 1;
+              thres_ptr[3*i + 0] = height;
+              thres_ptr[3*i + 1] = width;
+              thres_ptr[3*i + 2] = conjunction;
             }
         }
         status = nrt::pred_map_threshold_by_size(merged_pred_output, bounding_rects, size_threshold_buf, m_nrt->get_model_class_num());
@@ -1156,13 +774,10 @@ void MainWindow::segSetResults(nrt::NDBuffer merged_pred_output, cv::Mat &PRED_I
 
             cv::Scalar class_color_scalar = cv::Scalar(b, g, r);
 
-            const char* classname = "";
-            if(ui->tableWidget_class->item(rect_class_index-1, NAME_COL))
-                classname = ui->tableWidget_class->item(rect_class_index-1, NAME_COL)->text().toStdString().c_str();
+            QString classname = m_nrt->get_model_class_name(rect_class_index);
 
-            if (classname) {
-                //cv::putText(PRED_IMG, classname, cv::Point(rect_x, rect_y), FONT_HERSHEY_SIMPLEX, 1, white, 7);
-                cv::putText(PRED_IMG, classname, cv::Point(rect_x, rect_y), FONT_HERSHEY_SIMPLEX, 1, class_color_scalar, 4);
+            if (!classname.isEmpty()) {
+                cv::putText(PRED_IMG, classname.toStdString(), cv::Point(rect_x, rect_y), FONT_HERSHEY_SIMPLEX, 1, class_color_scalar, 4);
             }
         }
 
@@ -1198,14 +813,15 @@ void MainWindow::segSetResults(nrt::NDBuffer merged_pred_output, cv::Mat &PRED_I
 
         // Class Name in edit_show_class
         QString exist_class_string("");
-        for (int i = 0; i < ui->tableWidget_class->rowCount(); i++) {
-            if (exist_class[i]) {
-                QString classname = ui->tableWidget_class->item(i, NAME_COL)->text();
-                if (exist_class_string != QString(""))
+        for(int i = 0; i < m_nrt->get_model_class_num(); i++){
+            if(exist_class[i]){
+                if(exist_class_string != QString("")){
                     exist_class_string += ", ";
-                exist_class_string += classname;
+                }
+                exist_class_string += m_nrt->get_model_class_name(i);
             }
         }
+
         if (exist_class_string == QString(""))
             exist_class_string = QString("None");
         ui->edit_show_class->setText((QString(" ") + exist_class_string));
@@ -1260,15 +876,9 @@ void MainWindow::detSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vec
 
             // Treshold by size
             int h_thres, w_thres, a_thres;
-            if(ui->tableWidget_class->item(bbox.class_number-1, HEIGHT_COL))
-                h_thres = ui->tableWidget_class->item(bbox.class_number-1, HEIGHT_COL)->text().toInt();
-            else return;
-            if(ui->tableWidget_class->item(bbox.class_number-1, WIDTH_COL))
-                w_thres = ui->tableWidget_class->item(bbox.class_number-1, WIDTH_COL)->text().toInt();
-            else return;
-            if(ui->tableWidget_class->item(bbox.class_number-1, AND_OR_COL))
-                a_thres = (ui->tableWidget_class->item(bbox.class_number-1, AND_OR_COL)->text() == "and" ? 0 : 1);
-            else return;
+            h_thres = m_nrt->size_threshold[bbox.class_number].first;
+            w_thres = m_nrt->size_threshold[bbox.class_number].second;
+            a_thres = m_nrt->size_thres_conjunction[bbox.class_number] == "AND" ? 0 : 1;
 
             if (a_thres == 0) { // AND
                 if ((bbox.box_height < h_thres) && (bbox.box_width < w_thres))
@@ -1281,18 +891,12 @@ void MainWindow::detSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vec
 
             // Threshold by probability
             float cur_prob = probs[bbox.class_number+1] * 100;
-            string cur_prob_thres_str = "";
-            if(ui->tableWidget_class->item(bbox.class_number-1, PROB_THRES_COL))
-                cur_prob_thres_str = ui->tableWidget_class->item(bbox.class_number-1, PROB_THRES_COL)->text().toStdString();
-            else return;
-
-            cur_prob_thres_str = cur_prob_thres_str.substr(0, cur_prob_thres_str.length()-1);
-            double cur_prob_thres = QString::fromStdString(cur_prob_thres_str).toDouble();
+            float cur_prob_thres = m_nrt->prob_threshold[bbox.class_number];
             if (cur_prob < cur_prob_thres){
                 continue;
             }
 
-            exist_class[bbox.class_number-1] = true;
+            exist_class[bbox.class_number] = true;
             det_box_cnt[bbox.class_number-1] += 1;
             det_box_prob[bbox.class_number-1] += cur_prob;
 
@@ -1305,10 +909,7 @@ void MainWindow::detSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vec
                           class_color_scalar,
                           2
                           );
-            QString classname = "";
-            if(ui->tableWidget_class->item(bbox.class_number-1, NAME_COL))
-                classname = ui->tableWidget_class->item(bbox.class_number-1, NAME_COL)->text();
-            else return;
+            QString classname = m_nrt->get_model_class_name(bbox.class_number);
 
             std::ostringstream out;
             out.precision(2);
@@ -1325,19 +926,20 @@ void MainWindow::detSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vec
         // Class Name in edit_show_class
         QString exist_class_string("");
         int exist_class_cnt = 0;
-        for (int i = 0; i < ui->tableWidget_class->rowCount(); i++) {
-            if (exist_class[i]) {
-                exist_class_cnt++;
-                QString classname = ui->tableWidget_class->item(i, NAME_COL)->text();
+        for(int i = 0; i < m_nrt->get_model_class_num(); i++){
+            if(exist_class[i]){
+                exist_class_cnt ++;
+
                 if (exist_class_string != QString("")) {
                     if (exist_class_cnt == 5)
                         exist_class_string += ",\n";
                     else
                         exist_class_string += ", ";
                 }
-                exist_class_string += classname;
+                exist_class_string += m_nrt->get_model_class_name(i);
             }
         }
+
         if (exist_class_string == QString(""))
             exist_class_string = QString("None");
         ui->edit_show_class->setText((QString(" ") + exist_class_string));
@@ -1410,7 +1012,7 @@ void MainWindow::ocrSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vec
 
         // Set Color in Class List
         // ui->tableWidget_class->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-        for (int r = 0; r < ui->tableWidget_class->rowCount(); r++) {
+        /*for (int r = 0; r < ui->tableWidget_class->rowCount(); r++) {
             int colCount = ui->tableWidget_class->columnCount();
             if ((r == 3) || (r == 6))
                 colCount = 6;
@@ -1452,7 +1054,7 @@ void MainWindow::ocrSetResults(nrt::NDBufferList outputs, cv::Mat &PRED_IMG, vec
             ocr_string += classname;
         }
         ui->edit_show_class->setText(ocr_string);
-        new_row.push_back(ocr_string.toStdString());
+        new_row.push_back(ocr_string.toStdString());*/
     }
 }
 
@@ -1481,13 +1083,56 @@ void MainWindow::detClaEnsmbleSetResults(nrt::NDBufferList outputs, cv::Mat &PRE
             ui->edit_show_class->setText("None");
         }
 
+        cv::Mat intact_frame;
+        PRED_IMG.copyTo(intact_frame);
+
+        vector<bool> exist_class(m_nrt_ensmble->get_model_class_num(), false);  
+        vector<int> num_of_classified_boxes(m_nrt_ensmble->get_model_class_num(), 0);
+        vector<float> class_accum_probs(m_nrt_ensmble->get_model_class_num(), 0.0);
+
+        vector<int> num_of_detected_boxes(m_nrt->get_model_class_num(), 0);
+        vector<float> det_accum_probs(m_nrt->get_model_class_num(), 0.0);
+
         for(int box_idx = 0; box_idx < num_of_boxes; box_idx++){
             BoundingBox bbox = convert_to_bounding_box(bcyxhw_ptr + box_idx * 6, h_ratio, w_ratio);
 
-            // threshold by size
-            // threshold by probability
+            if (bbox.class_number < 1 || bbox.class_number > m_nrt->get_model_class_num()){
+                qDebug() << "Detection Box class is either background or out of range.";
+                continue;
+            }
+
+            // Treshold by size
+            int h_thres, w_thres, a_thres;
+            if(bbox.class_number < m_nrt->size_threshold.length() && bbox.class_number < m_nrt->size_thres_conjunction.length()){
+                h_thres = m_nrt->size_threshold[bbox.class_number].first;
+                w_thres = m_nrt->size_threshold[bbox.class_number].second;
+                a_thres = m_nrt->size_thres_conjunction[bbox.class_number] == "AND" ? 0 : 1;
+
+                if (a_thres == 0) { // AND
+                    if ((bbox.box_height < h_thres) && (bbox.box_width < w_thres))
+                        continue;
+                }
+                else {              // OR
+                    if ((bbox.box_height < h_thres) || (bbox.box_width < w_thres))
+                        continue;
+                }
+            }
+
+            // Threshold by prob
             const float* box_probs = prob_ptr + box_idx*(m_nrt->get_model_class_num() + 1);
             float cur_box_pred_class_prob = box_probs[bbox.class_number+1] * 100;
+
+            if(bbox.class_number < m_nrt->prob_threshold.length()){
+                float cur_prob_thres = m_nrt->prob_threshold[bbox.class_number];
+                if (cur_box_pred_class_prob < cur_prob_thres){
+                    continue;
+                }
+            }
+
+            if(bbox.class_number < num_of_detected_boxes.size() && bbox.class_number < det_accum_probs.size()){
+                num_of_detected_boxes[bbox.class_number] ++;
+                det_accum_probs[bbox.class_number] += cur_box_pred_class_prob;
+            }
 
             int x_start = bbox.box_center_X - ensmble_crop_size/2;
             int y_start = bbox.box_center_Y - ensmble_crop_size/2;
@@ -1506,41 +1151,69 @@ void MainWindow::detClaEnsmbleSetResults(nrt::NDBufferList outputs, cv::Mat &PRE
             }
 
             cv::Rect bounds(x_start, y_start, ensmble_crop_size, ensmble_crop_size);
-            cv::Mat cropped_cla_img = PRED_IMG(bounds);
-
-            QString _time = QDateTime::currentDateTime().toString("hh-mm-ss-zzz");
-            QString path = "C:/Users/user/data/aaaa/" + _time + ".png";
-            qDebug() << "imwrite) " << path;
-            cv::imwrite(path.toStdString(), cropped_cla_img);
+            cv::Mat cropped_cla_img = intact_frame(bounds);
+            cv::Mat img_to_infer;
+            cv::cvtColor(cropped_cla_img, img_to_infer, cv::COLOR_BGR2RGB);
 
             nrt::NDBufferList cla_outputs;
             nrt::NDBuffer cla_output_prob;
             nrt::NDBuffer cla_output_pred;
 
-            nrt::NDBuffer resized_img_buff = get_img_buffer(cropped_cla_img, m_nrt_ensmble.get());
+            nrt::NDBuffer resized_img_buff = get_img_buffer(img_to_infer, m_nrt_ensmble.get());
             cla_outputs = m_nrt_ensmble->execute(resized_img_buff);
             cla_output_pred = cla_outputs.get_at(m_nrt_ensmble->PRED_IDX);
             cla_output_prob = cla_outputs.get_at(m_nrt_ensmble->PROB_IDX);
 
-            int pred_cls_idx;
+            int pred_cls_idx = -1;
             nrt::Shape output_pred_shape = cla_output_pred.get_shape();
             for (int i = 0; i < output_pred_shape.dims[0]; i++) {
                 pred_cls_idx = *cla_output_pred.get_at_ptr<int>(i);
-                qDebug() << "Prediction class index(Not thresholded): " << QString::number(pred_cls_idx);
             }
+
+            // Threshold by prob
+            QString classname = m_nrt_ensmble->get_model_class_name(pred_cls_idx);
             float pred_cls_prob = *cla_output_prob.get_at_ptr<float>(0, pred_cls_idx) * 100;
 
-            // threshold by probability
-            int r, g, b;
-            COLOR_VECTOR[bbox.class_number-1].getRgb(&r, &g, &b);
-            cv::Scalar class_color_scalar = cv::Scalar(b, g, r);
+            if(pred_cls_idx < m_nrt_ensmble->prob_threshold.length()){
+                float cur_cla_prob_thres;
+                if(pred_cls_idx < m_nrt_ensmble->prob_threshold.length()){
+                    cur_cla_prob_thres = m_nrt_ensmble->prob_threshold[pred_cls_idx];
+                }
+                else{
+                    qDebug() << "claSetResults) " << "prob_threshold vector out of range";
+                    cur_cla_prob_thres = 90;
+                }
+
+                if (pred_cls_prob < cur_cla_prob_thres){
+                    classname = "Unknown";
+                }
+            }
+
+            qDebug() << "Predicted class: " << classname << ", Detection prob: " << QString::number(cur_box_pred_class_prob) << ", Classification Prob: " << QString::number(pred_cls_prob);
+
+            cv::Scalar class_color_scalar;
+            if(classname != "Unknown"){
+                if(pred_cls_idx < m_nrt_ensmble->get_model_class_num()){
+                    exist_class[pred_cls_idx] = true;
+                    num_of_classified_boxes[pred_cls_idx]++;
+                    class_accum_probs[pred_cls_idx] += pred_cls_prob;
+                }
+                if(pred_cls_idx < class_ratio.length()){
+                    class_ratio[pred_cls_idx] ++;
+                }
+                int r, g, b;
+                COLOR_VECTOR[pred_cls_idx].getRgb(&r, &g, &b);
+                class_color_scalar = cv::Scalar(b, g, r);
+            }
+            else{
+                class_color_scalar = cv::Scalar(0, 0, 0);
+            }
+
             cv::rectangle(PRED_IMG,
                           cv::Point(bbox.box_center_X - bbox.box_width/2, bbox.box_center_Y - bbox.box_height/2),
                           cv::Point(bbox.box_center_X + bbox.box_width/2 + (bbox.box_width % 2), bbox.box_center_Y + bbox.box_height / 2 + (bbox.box_height % 2)),
                           class_color_scalar,
-                          2);
-            QString classname = m_nrt_ensmble->get_model_class_name(pred_cls_idx);
-            ui->edit_show_class->setText(classname);
+                          1);
 
             /*TOD 한글 클래스명 때문에 예외 처리*/
             if(classname == QString::fromLocal8Bit("사람")){
@@ -1552,11 +1225,57 @@ void MainWindow::detClaEnsmbleSetResults(nrt::NDBufferList outputs, cv::Mat &PRE
             else if(classname == QString::fromLocal8Bit("차량")){
                 classname = "car";
             }
-            classname += "(" + QString::number(cur_box_pred_class_prob) + "%, " +QString::number(pred_cls_prob) +"%)";
+
+            //classname += "(" + QString::number(cur_box_pred_class_prob) + "%, " +QString::number(pred_cls_prob) +"%)";
 
             if (!classname.isEmpty()) {
-                cv::putText(PRED_IMG, classname.toStdString(), cv::Point(bbox.box_center_X - bbox.box_width / 2, bbox.box_center_Y - bbox.box_height / 2), FONT_HERSHEY_SIMPLEX, 1, white, 7);
-                cv::putText(PRED_IMG, classname.toStdString(), cv::Point(bbox.box_center_X - bbox.box_width / 2, bbox.box_center_Y - bbox.box_height / 2), FONT_HERSHEY_SIMPLEX, 1, class_color_scalar, 4);
+                cv::putText(PRED_IMG, classname.toStdString(), cv::Point(bbox.box_center_X - bbox.box_width / 2, bbox.box_center_Y - bbox.box_height / 2), FONT_HERSHEY_SIMPLEX, 1, white, 4);
+                cv::putText(PRED_IMG, classname.toStdString(), cv::Point(bbox.box_center_X - bbox.box_width / 2, bbox.box_center_Y - bbox.box_height / 2), FONT_HERSHEY_SIMPLEX, 1, class_color_scalar, 2);
+            }
+        }
+
+        QString show_class_str;
+        for(int i=0; i < m_nrt_ensmble->get_model_class_num(); i++){
+            if(exist_class[i]){
+                if(show_class_str != ""){
+                    show_class_str += ", ";
+                }
+                show_class_str += m_nrt_ensmble->get_model_class_name(i);
+            }
+        }
+        ui->edit_show_class->setText(QString(" ") + show_class_str);
+
+        // update pie chart
+        int total_boxes = 0;
+        for(int val : class_ratio){
+            total_boxes += val;
+        }
+        for(int i=0; i < m_nrt_ensmble->get_model_class_num(); i++){
+            if(i < series->slices().length() && i < class_ratio.length()){
+                float ratio = (float)class_ratio[i] / total_boxes;
+                series->slices().at(i)->setValue(ratio);
+            }
+        }
+
+        // update prob table
+        for(int i = 1; i < det_accum_probs.size(); i++){
+            float det_avg_prob = num_of_detected_boxes[i] == 0 ? 0 : det_accum_probs[i] / num_of_detected_boxes[i];
+            if(ui->table_model1_class_probs->item(i - 1, 1)){
+                ui->table_model1_class_probs->item(i - 1, 1)->setText(QString::number(det_avg_prob) + "%");
+            }
+        }
+
+        for(int i = 0; i < class_accum_probs.size(); i++){
+            if(exist_class[i]){
+                float cla_avg_prob = num_of_classified_boxes[i] == 0 ? 0 : class_accum_probs[i] / num_of_classified_boxes[i];
+                if(ui->table_model2_class_probs->item(i, 2)){
+                    ui->table_model2_class_probs->item(i, 2)->setText(QString::number(cla_avg_prob) + "%");
+                }
+            }
+            else{
+                if(ui->table_model2_class_probs->item(i, 2)){
+                    ui->table_model2_class_probs->item(i, 2)->setText("0%");
+                }
             }
         }
     }
@@ -1670,7 +1389,7 @@ void MainWindow::showResult() {
 
     std::chrono::duration<double, std::milli> inf_time;
     QString model_type;
-    if(m_nrt.use_count() > 0 && is_ready_for_inf(m_nrt.get()) && class_table_availbale){
+    if(m_nrt.use_count() > 0 && is_ready_for_inf(m_nrt.get())){
         model_type = m_nrt->get_model_type();
 
         if(model_type == "Segmentation"){
@@ -2091,7 +1810,7 @@ void MainWindow::on_btn_cam_select_clicked()
 
         QString video_filepath = QFileDialog::getOpenFileName(this,
                                                               tr("Select Input Video"),
-                                                              QDir::homePath(), tr(" (*.avi *.mp4)"));
+                                                              QDir::homePath(), tr(" (*.avi *.mp4 *.MOV *.mpg *.mpeg)"));
 
         if(video_filepath.isEmpty()){
             QMessageBox::information(this, "Notification", "No video was selected");
@@ -2102,7 +1821,13 @@ void MainWindow::on_btn_cam_select_clicked()
 
         qDebug() << video_filepath.toStdString().c_str();
 
-        m_videoInputCap.open(video_filepath.toLocal8Bit().constData(), cv::CAP_MSMF);
+        QString extension = video_filename.split('.').last();
+        if(extension == "avi" || extension == "mp4" || extension == "MOV"){
+            m_videoInputCap.open(video_filepath.toLocal8Bit().constData(), cv::CAP_MSMF);
+        }
+        else if(extension == "mpg" || extension == "mpeg"){
+            m_videoInputCap.open(video_filepath.toLocal8Bit().constData(), cv::CAP_FFMPEG);
+        }
 
         if(!m_videoInputCap.isOpened()){
             QMessageBox::information(this,
@@ -2112,6 +1837,10 @@ void MainWindow::on_btn_cam_select_clicked()
             m_videoInputCap.release();
             return;
         }
+
+        video_list.append(video_filepath);
+        ui->com_video_list->setVisible(true);
+        ui->com_video_list->addItem(video_filename);
 
         showResult();
         setCamControlEnabled(true);
@@ -2136,7 +1865,7 @@ void MainWindow::on_btn_cam_select_clicked()
         }
 
         QDirIterator itr(dir,
-                         {"*.mp4", "*.avi"},
+                         {"*.mp4", "*.avi", },
                          QDir::Files,
                          QDirIterator::Subdirectories);
 
@@ -2185,7 +1914,7 @@ void MainWindow::on_btn_cam_play_clicked()
     if(video_mode_flag && !m_videoInputCap.isOpened()){
         // video folder mode
         QString current_mode = ui->com_cam_input_select->currentText();
-        if(current_mode.toStdString() == VIDEO_FOLDER_TEXT){
+        if(current_mode.toStdString() == VIDEO_FOLDER_TEXT || current_mode.toStdString() == SINGLE_VIDEO_TEXT){
             on_com_video_list_currentTextChanged(ui->com_video_list->currentText());
         }
 
@@ -2301,7 +2030,7 @@ void MainWindow::on_btn_cam_stop_clicked()
     }
 
     setCamSelectEnabled(true);
-    if(ui->com_cam_input_select->currentText().toStdString() != VIDEO_FOLDER_TEXT){
+    if(ui->com_cam_input_select->currentText().toStdString() == CAMERA_TEXT){
         setCamControlEnabled(false);
     }
     setCamSaveEditEnabled(true);
@@ -2316,7 +2045,7 @@ void MainWindow::on_btn_cam_stop_clicked()
     ui->btn_img_mode->setEnabled(true);
 
     if (m_nrt.use_count() > 0 && m_nrt->get_model_status() == nrt::STATUS_SUCCESS && m_nrt->get_model_type() == "OCR") {
-        for (int r = 0; r < ui->tableWidget_class->rowCount(); r++) {
+        /*for (int r = 0; r < ui->tableWidget_class->rowCount(); r++) {
             int colCount = ui->tableWidget_class->columnCount();
             if ((r == 3) || (r == 6))
                 colCount = 6;
@@ -2324,7 +2053,7 @@ void MainWindow::on_btn_cam_stop_clicked()
                 ui->tableWidget_class->item(r, c)->setBackgroundColor(QColor(255, 255, 255));
                 ui->tableWidget_class->item(r, c)->setTextColor(QColor(0, 0, 0));
             }
-        }
+        }*/
     }
 
     // Auto save mode -> Save evaluation json file
@@ -2606,7 +2335,7 @@ void MainWindow::on_btn_img_stop_clicked()
     ui->edit_show_inf->setText("");
 
     if (m_nrt.use_count()>0 && m_nrt->get_model_status() == nrt::STATUS_SUCCESS && m_nrt->get_model_type() == "OCR") {
-        for (int r = 0; r < ui->tableWidget_class->rowCount(); r++) {
+        /*for (int r = 0; r < ui->tableWidget_class->rowCount(); r++) {
             int colCount = ui->tableWidget_class->columnCount();
             if ((r == 3) || (r == 6))
                 colCount = 6;
@@ -2614,7 +2343,7 @@ void MainWindow::on_btn_img_stop_clicked()
                 ui->tableWidget_class->item(r, c)->setBackgroundColor(QColor(255, 255, 255));
                 ui->tableWidget_class->item(r, c)->setTextColor(QColor(0, 0, 0));
             }
-        }
+        }*/
     }
 }
 
@@ -2648,7 +2377,6 @@ void MainWindow::on_com_cam_input_select_currentTextChanged(const QString &text)
         if(ui->com_video_list->isEnabled()){
             video_list.clear();
             ui->com_video_list->clear();
-            ui->com_video_list->hide();
         }
     }
     else if(text.toStdString() == VIDEO_FOLDER_TEXT){
@@ -2678,7 +2406,15 @@ void MainWindow::on_com_video_list_currentTextChanged(const QString& text){
     }
 
     QString cur_video_path = video_list[ui->com_video_list->currentIndex()];
-    m_videoInputCap.open(cur_video_path.toLocal8Bit().constData(), cv::CAP_MSMF);
+
+    QString extension = cur_video_path.split('.').last();
+    if(extension == "avi" || extension == "mp4" || extension == "MOV"){
+        m_videoInputCap.open(cur_video_path.toLocal8Bit().constData(), cv::CAP_MSMF);
+    }
+    else if(extension == "mpg" || extension == "mpeg"){
+        m_videoInputCap.open(cur_video_path.toLocal8Bit().constData(), cv::CAP_FFMPEG);
+    }
+
     if(!m_videoInputCap.isOpened()){
         QMessageBox::information(this,
                                  "Notification",
@@ -2740,6 +2476,7 @@ void MainWindow::on_btn_select_single_mode_clicked()
     view->setSelectionBehavior(QAbstractItemView::SelectRows);
     view->setSelectionMode(QAbstractItemView::SingleSelection);
     root_cont->addWidget(view);
+    view->hide();
 
     QDialogButtonBox*btnbox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
                                                    Qt::Horizontal, &dialog);
@@ -2795,7 +2532,7 @@ void MainWindow::on_btn_select_single_mode_clicked()
     setInfMode(INF_MODE_SINGLE);
 
     connect(futureWatcher.get(), SIGNAL(started()), this, SLOT(set_model_started()));
-    connect(futureWatcher.get(), SIGNAL(finished()), this, SLOT(set_model_completed()));
+    connect(futureWatcher.get(), SIGNAL(finished()), this, SLOT(setUiForSingle()));
 
     future = QtConcurrent::run(set_model_thread, m_nrt.get(), modelPath, ui->cbx_select_fp16->isChecked());
     futureWatcher->setFuture(future);
@@ -2806,119 +2543,19 @@ void MainWindow::set_model_started(){
         ui->Model_Proper->setCurrentWidget(ui->Model_Status_Page);
     }
 
-    if(class_table_availbale == true){
-        class_table_availbale = false;
-    }
-
     ui->rad_cam_autosave->setEnabled(false);
 
     ui->lab_model_status->setText("Loading Model...\nIt may take a few seconds...");
     ui->btn_select_single_mode->setEnabled(false);
     ui->btn_select_ensmble_mode->setEnabled(false);
     ui->cbx_select_fp16->setEnabled(false);
+    ui->btn_model_settings->setEnabled(false);
 
     // Clear class label and inference time
     ui->edit_show_inf->clear();
     ui->edit_show_class->clear();
 
-    setClassTable(false);
-}
-
-void MainWindow::set_model_completed(){
-    QString modelPath = futureWatcher->result(); // 결과값 modelPath가 빈 문자열이면 문제가 생긴거고 아니면 잘 된 거
-
-    disconnect(futureWatcher.get(), SIGNAL(started()), this, SLOT(set_model_started()));
-    disconnect(futureWatcher.get(), SIGNAL(finished()), this, SLOT(set_model_completed()));
-
-    if(!modelPath.isEmpty() && (m_nrt->get_model_status() == nrt::STATUS_SUCCESS)){
-        qDebug() << "NRT) Set Model Completed! :"  << modelPath;
-
-        QString model_name = m_nrt->get_model_name();
-
-        //setTabelColumn(true);
-        setModelInfo(true, model_name);
-    }
-    else {
-        qDebug() << "NRT) Set Model Failed!";
-
-        QMessageBox messageBox;
-        messageBox.critical(0,"Error","Model initialization has falied!");
-        messageBox.setFixedSize(500,200);
-
-        ui->lab_model_status->setText("Please Select Model.");
-
-        currentModelId = -1;
-    }
-
-    ui->btn_select_single_mode->setEnabled(true);
-    ui->btn_select_ensmble_mode->setEnabled(true);
-    ui->cbx_select_fp16->setEnabled(true);
-
-    ui->rad_cam_autosave->setEnabled(true);
-
-    // db에 저장되지 않은 모델이면 insert 하기
-    if(insert_new_model_flag){
-        insert_new_model_flag = false;
-        int modelId = m_db->InsertModel(modelPath, m_nrt->get_model_name(), m_nrt->get_model_type(), m_nrt->get_model_training_type(), m_nrt->get_model_search_level(), m_nrt->get_model_inference_level());
-        if(modelId == -1){
-            qDebug() << "Model did not get saved in db correctly.";
-            currentModelId = -1;
-            return;
-        }
-        currentModelId = modelId;
-    }
-    return;
-}
-
-void MainWindow::set_model_completed_ens(){
-    QString modelPath = futureWatcherEns->result(); // 결과값 modelPath가 빈 문자열이면 문제가 생긴거고 아니면 잘 된 거
-
-    disconnect(futureWatcherEns.get(), SIGNAL(started()), this, SLOT(set_model_started()));
-    disconnect(futureWatcherEns.get(), SIGNAL(finished()), this, SLOT(set_model_completed()));
-
-    if(!modelPath.isEmpty() && (m_nrt_ensmble->get_model_status() == nrt::STATUS_SUCCESS)){
-        qDebug() << "NRT) Set Model Completed! :"  << modelPath;
-
-        QString model_name = m_nrt_ensmble->get_model_name();
-
-        //setTabelColumn(true);
-        setModelInfo(true, model_name);
-    }
-    else {
-        qDebug() << "NRT) Set Model Failed!";
-
-        QMessageBox messageBox;
-        messageBox.critical(0,"Error","Model initialization has falied!");
-        messageBox.setFixedSize(500,200);
-
-        ui->lab_model_status->setText("Please Select Model.");
-
-        currentModelId = -1;
-    }
-
-    ui->btn_select_single_mode->setEnabled(true);
-    ui->btn_select_ensmble_mode->setEnabled(true);
-    ui->cbx_select_fp16->setEnabled(true);
-
-    ui->rad_cam_autosave->setEnabled(true);
-
-    // db에 저장되지 않은 모델이면 insert 하기
-    if(insert_new_model_flag){
-        insert_new_model_flag = false;
-        int modelId = m_db->InsertModel(modelPath, m_nrt_ensmble->get_model_name(), m_nrt_ensmble->get_model_type(), m_nrt_ensmble->get_model_training_type(), m_nrt_ensmble->get_model_search_level(), m_nrt_ensmble->get_model_inference_level());
-        if(modelId == -1){
-            qDebug() << "Model did not get saved in db correctly.";
-            currentModelId = -1;
-            return;
-        }
-        currentModelId = modelId;
-    }
-
-    // class name debugging 용도 출력
-    for(int i=0;i<m_nrt_ensmble->get_model_class_num();i++){
-        qDebug() << "Class " << i << ": " << m_nrt_ensmble->get_model_class_name(i);
-    }
-    return;
+    ui->inf_numbers->hide();
 }
 
 void MainWindow::select_gpu(NrtExe* nrt_ptr, QString msg)
@@ -3003,6 +2640,24 @@ void MainWindow::on_btn_select_ensmble_mode_clicked(){
         view->hideColumn(3);
         view->setSelectionBehavior(QAbstractItemView::SelectRows);
         view->setSelectionMode(QAbstractItemView::SingleSelection);
+        view->verticalHeader()->hide();
+        view->horizontalHeader()->show();
+        view->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+        // vertical resize table widget to contents
+        int totalRowHeight = 0;
+        int count = view->verticalHeader()->count();
+        for(int i=0; i < count; i++){
+            if(!view->verticalHeader()->isSectionHidden(i)){
+                totalRowHeight +=  view->verticalHeader()->sectionSize(i);
+            }
+        }
+        if(!view->horizontalScrollBar()->isHidden()){
+            totalRowHeight += view->horizontalScrollBar()->height();
+        }
+        if(!view->horizontalHeader()->isHidden()){
+            totalRowHeight += view->horizontalHeader()->height();
+        }
+        view->setMaximumHeight(totalRowHeight);
         root_cont->addWidget(view);
 
         root_cont->addWidget(new QLabel("Select Classification Model"));
@@ -3025,9 +2680,25 @@ void MainWindow::on_btn_select_ensmble_mode_clicked(){
         view2->hideColumn(3);
         view2->setSelectionBehavior(QAbstractItemView::SelectRows);
         view2->setSelectionMode(QAbstractItemView::SingleSelection);
+        view2->verticalHeader()->hide();
+        view2->horizontalHeader()->show();
+        view2->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+        // vertical resize table widget to contents
+        totalRowHeight = 0;
+        count = view2->verticalHeader()->count();
+        for(int i=0; i < count; i++){
+            if(!view2->verticalHeader()->isSectionHidden(i)){
+                totalRowHeight +=  view2->verticalHeader()->sectionSize(i);
+            }
+        }
+        if(!view2->horizontalScrollBar()->isHidden()){
+            totalRowHeight += view2->horizontalScrollBar()->height();
+        }
+        if(!view2->horizontalHeader()->isHidden()){
+            totalRowHeight += view2->horizontalHeader()->height();
+        }
+        view2->setMaximumHeight(totalRowHeight);
         root_cont->addWidget(view2);
-
-        root_cont->addWidget(new QLabel("1. One Class Detection\n2. Crop\n3. Multi Class Classification"));
 
         QDialogButtonBox*btnbox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
                                                        Qt::Horizontal, &dialog);
@@ -3035,6 +2706,9 @@ void MainWindow::on_btn_select_ensmble_mode_clicked(){
         connect(btnbox, SIGNAL(rejected()), &dialog, SLOT(reject()));
         root_cont->addWidget(btnbox);
         dialog.setLayout(root_cont);
+
+        int min_width = view->width() > view2->width() ? view->width() : view2->width();
+        dialog.setMinimumWidth(min_width);
 
         int det_modelId = -1, cla_modelId = -1;
         while(1){
@@ -3098,17 +2772,529 @@ void MainWindow::on_btn_select_ensmble_mode_clicked(){
 
     // Make detection executor thread
     connect(futureWatcher.get(), SIGNAL(started()), this, SLOT(set_model_started()));
-    connect(futureWatcher.get(), SIGNAL(finished()), this, SLOT(set_model_completed()));
+    connect(futureWatcher.get(), SIGNAL(finished()), this, SLOT(ensmble_model_start()));
     QString det_modelPath = m_db->getModelPath(currentModelId);
     qDebug() << "Detection model path: " << det_modelPath;
     future = QtConcurrent::run(set_model_thread, m_nrt.get(), det_modelPath, ui->cbx_select_fp16->isChecked());
     futureWatcher->setFuture(future);
+}
+
+void MainWindow::ensmble_model_start(){
+    disconnect(futureWatcher.get(), SIGNAL(started()), this, SLOT(set_model_started()));
+    disconnect(futureWatcher.get(), SIGNAL(finished()), this, SLOT(ensmble_model_start()));
 
     // Make classification executor thread
     connect(futureWatcherEns.get(), SIGNAL(started()), this, SLOT(set_model_started()));
-    connect(futureWatcherEns.get(), SIGNAL(finished()), this, SLOT(set_model_completed_ens()));
+    connect(futureWatcherEns.get(), SIGNAL(finished()), this, SLOT(setUiForEnsmble()));
     QString cla_modelPath = m_db->getModelPath(ensmbleModelId);
     qDebug() << "Classification model path: " << cla_modelPath;
     futureEns = QtConcurrent::run(set_model_thread, m_nrt_ensmble.get(), cla_modelPath, ui->cbx_select_fp16->isChecked());
     futureWatcherEns->setFuture(futureEns);
 }
+
+void MainWindow::setUiForEnsmble(){
+    qDebug() << "setUiForEnsmble) Start ensmble Ui setup.";
+
+    disconnect(futureWatcherEns.get(), SIGNAL(started()), this, SLOT(set_model_started()));
+    disconnect(futureWatcherEns.get(), SIGNAL(finished()), this, SLOT(setUiForEnsmble()));
+
+    if(m_nrt.use_count() > 0 && is_ready_for_inf(m_nrt.get()) && m_nrt_ensmble.use_count() > 0 && is_ready_for_inf(m_nrt_ensmble.get())){
+        // 0: Model Info Page, 1: Model Status Page
+        if( ui->Model_Proper->currentIndex() == 1 ) {
+            ui->Model_Proper->setCurrentWidget(ui->Model_Info_Page);
+        }
+
+        // GPU Device 설정
+        if(m_nrt->get_gpu_num() == 1){
+            ui->lab_device->setText(m_nrt->get_gpu_name());
+        }
+        else if(m_nrt->get_gpu_num() > 1){
+            ui->lab_device->setText(m_nrt->get_gpu_name() + ", " + m_nrt_ensmble->get_gpu_name());
+        }
+
+        // Model Name 설정
+        ui->lab_model_name->setText(m_nrt->get_model_name() + ", " + m_nrt_ensmble->get_model_name());
+        QString model_info = "Type: " + m_nrt->get_model_type() + ", " + m_nrt_ensmble->get_model_type() + "\n";
+        model_info += "Platform: " + m_nrt->get_model_training_type() + ", " + m_nrt_ensmble->get_model_training_type() + "\n";
+        model_info += "Search Space: " + m_nrt->get_model_search_level() + ", " + m_nrt_ensmble->get_model_search_level();
+        ui->lab_model_name->setToolTip(model_info);
+
+        // Model treshold 설정
+        prob_threshold_dialog(m_nrt.get());
+        size_threshold_dialog(m_nrt.get());
+        prob_threshold_dialog(m_nrt_ensmble.get());
+
+        // Model 1 UI Setting
+        ui->lab_model1->setText("Object Detection Class Probs.");
+        ui->table_model1_class_probs->clear();
+        ui->table_model1_class_probs->horizontalHeader()->hide();
+        ui->table_model1_class_probs->verticalHeader()->hide();
+        ui->table_model1_class_probs->horizontalHeader()->show();
+        ui->table_model1_class_probs->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+
+        QString model_type = m_nrt->get_model_type();
+        int NAME_COL = 0, PROB_COL = 1;
+        int START_POINT;
+
+        if(model_type == "Detection"){
+            START_POINT = 1;
+            ui->table_model1_class_probs->setRowCount(m_nrt->get_model_class_num() - START_POINT);
+            ui->table_model1_class_probs->setColumnCount(2);
+            QStringList horHeader ={"Name", "Probability"};
+            ui->table_model1_class_probs->setHorizontalHeaderLabels(horHeader);
+
+            // Name column
+            for (int i = START_POINT; i < m_nrt->get_model_class_num(); i++) {
+                QTableWidgetItem *newItem = new QTableWidgetItem(0);
+                newItem->setText(m_nrt->get_model_class_name(i));
+                newItem->setTextAlignment(Qt::AlignCenter);
+                ui->table_model1_class_probs->setItem(i - START_POINT, NAME_COL, newItem);
+            }
+
+            // Prob column
+            int row_cnt = ui->table_model1_class_probs->rowCount();
+            for (int i = 0; i < row_cnt; i++) {
+                QTableWidgetItem *newItem = new QTableWidgetItem(0);
+                newItem->setText(QString::number(0) + QString("%"));
+                newItem->setTextAlignment(Qt::AlignCenter);
+                ui->table_model1_class_probs->setItem(i, PROB_COL, newItem);
+            }
+        }
+        else return;
+
+
+        // Model 2 UI Setting
+        int COLOR_COL = 0;
+        NAME_COL = 1, PROB_COL = 2;
+        ui->lab_model2->setText("Classification Class Probs.");
+
+        ui->table_model2_class_probs->clear();
+        ui->table_model2_class_probs->horizontalHeader()->hide();
+        ui->table_model2_class_probs->verticalHeader()->hide();
+        ui->table_model2_class_probs->horizontalHeader()->show();
+        ui->table_model2_class_probs->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+        //ui->table_model2_class_probs->verticalHeader()->setStretchLastSection(true);
+
+        model_type = m_nrt_ensmble->get_model_type();
+        if(model_type == "Classification"){
+            START_POINT = 0;
+            ui->table_model2_class_probs->setRowCount(m_nrt_ensmble->get_model_class_num() - START_POINT);
+            ui->table_model2_class_probs->setColumnCount(3);
+            QStringList horHeader = {"Color", "Name", "Probability"};
+            ui->table_model2_class_probs->setHorizontalHeaderLabels(horHeader);
+
+            // Color Column
+            COLOR_VECTOR.clear();
+            int row_cnt = ui->table_model2_class_probs->rowCount();
+
+            for (int i = 0; i < row_cnt; i++) {
+                QWidget* cWidget = new QWidget();
+                QLabel* lab_color = new QLabel();
+                QColor new_color = QColor(0, 0, 0);
+
+                if (i == 0)
+                    new_color = QColor(255, 0, 0);
+                else if(i == 1)
+                    new_color = QColor(0, 0, 255);
+                else if(i ==2)
+                    new_color = QColor(0, 255, 0);
+
+                QVariant cVariant = new_color;
+                QString cString = cVariant.toString();
+                lab_color->setStyleSheet("background-color:"+cString+";");
+                lab_color->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+                lab_color->setContentsMargins(0,0,0,0);
+                lab_color->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
+                QHBoxLayout* cLayout = new QHBoxLayout(cWidget);
+                cLayout->addWidget(lab_color);
+                cLayout->setAlignment(Qt::AlignCenter);
+                cLayout->setContentsMargins(30, 2, 30, 2);
+                cWidget->setLayout(cLayout);
+                ui->table_model2_class_probs->setCellWidget(i, COLOR_COL, cWidget);
+                COLOR_VECTOR.append(new_color);
+            }
+
+            // Name column
+            for (int i = START_POINT; i < m_nrt_ensmble->get_model_class_num(); i++) {
+                QTableWidgetItem *newItem = new QTableWidgetItem(0);
+                newItem->setText(m_nrt_ensmble->get_model_class_name(i));
+                newItem->setTextAlignment(Qt::AlignCenter);
+                ui->table_model2_class_probs->setItem(i - START_POINT, NAME_COL, newItem);
+            }
+
+            // Prob column
+            row_cnt = ui->table_model2_class_probs->rowCount();
+            for (int i = 0; i < row_cnt; i++) {
+                QTableWidgetItem *newItem = new QTableWidgetItem(0);
+                newItem->setText(QString::number(0) + QString("%"));
+                newItem->setTextAlignment(Qt::AlignCenter);
+                ui->table_model2_class_probs->setItem(i, PROB_COL, newItem);
+            }
+        }
+        else return;
+
+        // Chart View Setting
+        if(inf_mode_status == INF_MODE_DET_CLA){
+            series = new QPieSeries();
+            for(int i = 0; i < m_nrt_ensmble->get_model_class_num(); i++){
+                QString classname = m_nrt_ensmble->get_model_class_name(i);
+                series->append(classname, 1);
+            }
+            series->setLabelsVisible(true);
+            series->setLabelsPosition(QPieSlice::LabelInsideHorizontal);
+
+            class_ratio.clear();
+            class_ratio = QVector<int>(m_nrt_ensmble->get_model_class_num(), 0);
+
+            for(int i=0; i < m_nrt_ensmble->get_model_class_num(); i++){
+                if(i < series->slices().length() && i < COLOR_VECTOR.length()){
+                    series->slices().at(i)->setColor(COLOR_VECTOR[i]);
+                    series->slices().at(i)->setLabelColor(QColor(255, 255, 255));
+                    series->slices().at(i)->setLabelFont(QFont("Ubuntu", 10));
+                }
+            }
+
+            /*QPieSlice* slice = series->slices().at(1);
+            slice->setExploded();
+            slice->setLabelVisible();
+            slice->setPen(QPen(Qt::darkGreen, 2));
+            slice->setBrush(Qt::green);*/
+
+            chart = new QChart();
+            chart->addSeries(series);
+            chart->setTitle("Class Ratio");
+            chart->legend()->hide();
+
+            ui->inf_chart_view->setChart(chart);
+            ui->inf_chart_view->setRenderHint(QPainter::Antialiasing);
+        }
+
+        // vertical resize table widget to contents
+        int totalRowHeight = 0;
+        // visible row height
+        int count = ui->table_model1_class_probs->verticalHeader()->count();
+        for(int i=0; i < count; i++){
+            if(!ui->table_model1_class_probs->verticalHeader()->isSectionHidden(i)){
+                totalRowHeight +=  ui->table_model1_class_probs->verticalHeader()->sectionSize(i);
+            }
+        }
+        //scrollbar visibility
+        if(!ui->table_model1_class_probs->horizontalScrollBar()->isHidden()){
+            totalRowHeight += ui->table_model1_class_probs->horizontalScrollBar()->height();
+        }
+        // horizontal header visibility
+        if(!ui->table_model1_class_probs->horizontalHeader()->isHidden()){
+            totalRowHeight += ui->table_model1_class_probs->horizontalHeader()->height();
+        }
+        ui->table_model1_class_probs->setMaximumHeight(totalRowHeight);
+
+        totalRowHeight = 0;
+        count = ui->table_model2_class_probs->verticalHeader()->count();
+        for(int i=0; i < count; i++){
+            if(!ui->table_model2_class_probs->verticalHeader()->isSectionHidden(i)){
+                totalRowHeight +=  ui->table_model2_class_probs->verticalHeader()->sectionSize(i);
+            }
+        }
+        if(!ui->table_model2_class_probs->horizontalScrollBar()->isHidden()){
+            totalRowHeight += ui->table_model2_class_probs->horizontalScrollBar()->height();
+        }
+        if(!ui->table_model2_class_probs->horizontalHeader()->isHidden()){
+            totalRowHeight += ui->table_model2_class_probs->horizontalHeader()->height();
+        }
+        ui->table_model2_class_probs->setMaximumHeight(totalRowHeight);
+    }
+
+    ui->btn_select_single_mode->setEnabled(true);
+    ui->btn_select_ensmble_mode->setEnabled(true);
+    ui->cbx_select_fp16->setEnabled(true);
+    ui->rad_cam_autosave->setEnabled(true);
+    ui->btn_model_settings->setEnabled(true);
+
+    ui->inf_numbers->setVisible(true);
+    return;
+}
+
+void MainWindow::setUiForSingle(){
+    QString modelPath = futureWatcher->result();
+
+    disconnect(futureWatcher.get(), SIGNAL(started()), this, SLOT(set_model_started()));
+    disconnect(futureWatcher.get(), SIGNAL(finished()), this, SLOT(setUiForSingle()));
+
+    if(m_nrt.use_count() > 0 && is_ready_for_inf(m_nrt.get())){
+        // db에 저장되지 않은 모델이면 insert 하기
+        if(insert_new_model_flag){
+            insert_new_model_flag = false;
+            int modelId = m_db->InsertModel(modelPath, m_nrt->get_model_name(), m_nrt->get_model_type(), m_nrt->get_model_training_type(), m_nrt->get_model_search_level(), m_nrt->get_model_inference_level());
+            if(modelId == -1){
+                qDebug() << "Model did not get saved in db correctly.";
+                currentModelId = -1;
+                return;
+            }
+            currentModelId = modelId;
+        }
+
+        // 0: Model Info Page, 1: Model Status Page
+        if( ui->Model_Proper->currentIndex() == 1 ) {
+            ui->Model_Proper->setCurrentWidget(ui->Model_Info_Page);
+        }
+
+        // GPU Device 설정
+        ui->lab_device->setText(m_nrt->get_gpu_name());
+
+        // Model Name 설정
+        ui->lab_model_name->setText(m_nrt->get_model_name());
+        QString model_info = "Type: " + m_nrt->get_model_type() + "\n";
+        model_info += "Platform: " + m_nrt->get_model_training_type() + "\n";
+        model_info += "Search Space: " + m_nrt->get_model_search_level();
+        ui->lab_model_name->setToolTip(model_info);
+
+        // Model treshold 설정
+        prob_threshold_dialog(m_nrt.get());
+        size_threshold_dialog(m_nrt.get());
+
+        // Model 1 UI Setting
+        ui->lab_model1->setText(m_nrt->get_model_type() + " Predcited Class: ");
+        QString model_type = m_nrt->get_model_type();
+        int NAME_COL = 0, PROB_COL = 1;
+        int START_POINT;
+        if(model_type == "Detection"){
+            START_POINT = 1;
+            ui->table_model1_class_probs->setRowCount(m_nrt->get_model_class_num() - START_POINT);
+            ui->table_model1_class_probs->setColumnCount(2);
+            QStringList horHeader ={"Name", "Probability"};
+            ui->table_model1_class_probs->setHorizontalHeaderLabels(horHeader);
+
+            // Name column
+            for (int i = START_POINT; i < m_nrt->get_model_class_num(); i++) {
+                QTableWidgetItem *newItem = new QTableWidgetItem(0);
+                newItem->setText(m_nrt->get_model_class_name(i));
+                newItem->setTextAlignment(Qt::AlignCenter);
+                ui->table_model1_class_probs->setItem(i - START_POINT, NAME_COL, newItem);
+            }
+
+            // Prob column
+            int row_cnt = ui->table_model1_class_probs->rowCount();
+            for (int i = 0; i < row_cnt; i++) {
+                QTableWidgetItem *newItem = new QTableWidgetItem(0);
+                newItem->setText(QString::number(0) + QString("%"));
+                newItem->setTextAlignment(Qt::AlignCenter);
+                ui->table_model1_class_probs->setItem(i, PROB_COL, newItem);
+            }
+        }
+        else return;
+
+        // Chart View Setting
+        if(inf_mode_status == INF_MODE_DET_CLA){
+            series = new QPieSeries();
+            for(int i = 0; i < m_nrt_ensmble->get_model_class_num(); i++){
+                QString classname = m_nrt_ensmble->get_model_class_name(i);
+                series->append(classname, 1);
+            }
+            series->setLabelsVisible(true);
+            series->setLabelsPosition(QPieSlice::LabelInsideHorizontal);
+
+            class_ratio.clear();
+            class_ratio = QVector<int>(m_nrt_ensmble->get_model_class_num(), 0);
+
+            for(int i=0; i < m_nrt_ensmble->get_model_class_num(); i++){
+                if(i < series->slices().length() && i < COLOR_VECTOR.length()){
+                    series->slices().at(i)->setColor(COLOR_VECTOR[i]);
+                    series->slices().at(i)->setColor(QColor(255, 255, 255));
+                }
+            }
+
+            /*QPieSlice* slice = series->slices().at(1);
+            slice->setExploded();
+            slice->setLabelVisible();
+            slice->setPen(QPen(Qt::darkGreen, 2));
+            slice->setBrush(Qt::green);*/
+
+            chart = new QChart();
+            chart->addSeries(series);
+            chart->setTitle("Class Ratio");
+            chart->legend()->hide();
+
+            ui->inf_chart_view->setChart(chart);
+            ui->inf_chart_view->setRenderHint(QPainter::Antialiasing);
+        }
+
+        // vertical resize table widget to contents
+        int totalRowHeight = 0;
+        // visible row height
+        int count = ui->table_model1_class_probs->verticalHeader()->count();
+        for(int i=0; i < count; i++){
+            if(!ui->table_model1_class_probs->verticalHeader()->isSectionHidden(i)){
+                totalRowHeight +=  ui->table_model1_class_probs->verticalHeader()->sectionSize(i);
+            }
+        }
+        //scrollbar visibility
+        if(!ui->table_model1_class_probs->horizontalScrollBar()->isHidden()){
+            totalRowHeight += ui->table_model1_class_probs->horizontalScrollBar()->height();
+        }
+        // horizontal header visibility
+        if(!ui->table_model1_class_probs->horizontalHeader()->isHidden()){
+            totalRowHeight += ui->table_model1_class_probs->horizontalHeader()->height();
+        }
+        ui->table_model1_class_probs->setMaximumHeight(totalRowHeight);
+
+        // Hide Model2 realted stuff
+    }
+    else{
+        qDebug() << "NRT) Set Model Failed!";
+
+        QMessageBox messageBox;
+        messageBox.critical(0,"Error","Model initialization has falied!");
+        messageBox.setFixedSize(500,200);
+
+        ui->lab_model_status->setText("Please Select Model.");
+
+        currentModelId = -1;
+    }
+
+    ui->btn_select_single_mode->setEnabled(true);
+    ui->btn_select_ensmble_mode->setEnabled(true);
+    ui->cbx_select_fp16->setEnabled(true);
+    ui->rad_cam_autosave->setEnabled(true);
+    ui->btn_model_settings->setEnabled(true);
+
+    return;
+}
+
+void MainWindow::on_btn_model_settings_clicked(){
+    // threshold 값 수정, alert 기능
+    on_btn_cam_pause_clicked();
+
+    on_btn_cam_play_clicked();
+}
+
+void MainWindow::prob_threshold_dialog(NrtExe* nrt_ptr){
+    QString model_type = nrt_ptr->get_model_type();
+    if(model_type == "Anomaly" || model_type == "OCR") {
+        return;
+    }
+
+    QDialog dialog(this);
+    QVBoxLayout* root_cont = new QVBoxLayout;
+
+    QFormLayout* modelform = new QFormLayout;
+    modelform->addRow(new QLabel("Set probability threshold for model: " + nrt_ptr->get_model_name()));
+
+    QVector<QLineEdit*> line_edit_vector;
+    for(int i=0; i < nrt_ptr->get_model_class_num(); i++){
+        QLineEdit* line_edit = new QLineEdit(nullptr);
+
+        line_edit->setText("0");
+        QDoubleValidator* double_valid = new QDoubleValidator(0, 100, 2);
+        double_valid->setNotation(QDoubleValidator::StandardNotation);
+        line_edit->setValidator(double_valid);
+
+        modelform->addRow(new QLabel(nrt_ptr->get_model_class_name(i) + ": "), line_edit);
+        line_edit_vector.append(line_edit);
+    }
+    root_cont->addLayout(modelform);
+
+    QDialogButtonBox*btnbox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
+                                                   Qt::Horizontal, &dialog);
+    connect(btnbox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+    connect(btnbox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+    root_cont->addWidget(btnbox);
+    dialog.setLayout(root_cont);
+
+    if(dialog.exec() == QDialog::Accepted){
+        nrt_ptr->prob_threshold.clear();
+        qDebug() << nrt_ptr->get_model_name() << "prob threshold.";
+        for(int i=0; i < nrt_ptr->get_model_class_num(); i++){
+            float thres_value = line_edit_vector[i]->text().toFloat();
+            nrt_ptr->prob_threshold.append(thres_value);
+            qDebug() << nrt_ptr->get_model_class_name(i) << ": " << QString::number(thres_value);
+        }
+
+    }
+    else{
+        QMessageBox::information(
+                    this,
+                    "Notification",
+                    "Probability threshold selection has been canceled.",
+                    QMessageBox::Ok);
+    }
+    return;
+}
+
+void MainWindow::size_threshold_dialog(NrtExe* nrt_ptr){
+    QString model_type = nrt_ptr->get_model_type();
+    if(model_type == "Classification" || model_type == "OCR" || model_type == "Anomaly") {
+        return;
+    }
+
+    QDialog dialog(this);
+    QVBoxLayout* root_cont = new QVBoxLayout;
+
+    QVector<QLineEdit*> height_vector;
+    QVector<QLineEdit*> width_vector;
+    QVector<QComboBox*> conjunction_vector;
+
+    for(int i=0; i < nrt_ptr->get_model_class_num(); i++){
+        QLabel *lab = new QLabel(nrt_ptr->get_model_class_name(i) + " size threshold");
+        root_cont->addWidget(lab);
+
+        QHBoxLayout* hbox = new QHBoxLayout();
+
+        hbox->addWidget(new QLabel("Height: "));
+        QLineEdit* line_edit_height = new QLineEdit();
+        line_edit_height->setText("0");
+        QIntValidator *intValidator = new QIntValidator(0,9999);
+        line_edit_height->setValidator(intValidator);
+        hbox->addWidget(line_edit_height);
+
+        hbox->addWidget(new QLabel("Conjuction: "));
+        QComboBox* comb = new QComboBox();
+        comb->addItem("AND");
+        comb->addItem("OR");
+        hbox->addWidget(comb);
+
+        hbox->addWidget(new QLabel("Width: "));
+        QLineEdit* line_edit_width = new QLineEdit();
+        line_edit_width->setText("0");
+        line_edit_width->setValidator(intValidator);
+        hbox->addWidget(line_edit_width);
+
+        root_cont->addLayout(hbox);
+
+        height_vector.append(line_edit_height);
+        width_vector.append(line_edit_width);
+        conjunction_vector.append(comb);
+    }
+
+
+    QDialogButtonBox*btnbox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
+                                                   Qt::Horizontal, &dialog);
+    connect(btnbox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+    connect(btnbox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+    root_cont->addWidget(btnbox);
+    dialog.setLayout(root_cont);
+
+    if(dialog.exec() == QDialog::Accepted){
+        nrt_ptr->size_thres_conjunction.clear();
+        nrt_ptr->size_threshold.clear();
+
+        qDebug() << nrt_ptr->get_model_name() << "size threshold.";
+        for(int i=0; i < nrt_ptr->get_model_class_num(); i++){
+            int height_thres = height_vector[i]->text().toInt();
+            int width_thres = width_vector[i]->text().toInt();
+            QString conj = conjunction_vector[i]->currentText();
+
+            nrt_ptr->size_threshold.append(qMakePair(height_thres, width_thres));
+            nrt_ptr->size_thres_conjunction.append(conj);
+        }
+
+    }
+    else{
+        QMessageBox::information(
+                    this,
+                    "Notification",
+                    "Size threshold selection has been canceled.",
+                    QMessageBox::Ok);
+    }
+    return;
+}
+

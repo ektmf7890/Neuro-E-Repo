@@ -1,17 +1,11 @@
 ﻿#ifndef SQLITEDB_H
 #define SQLITEDB_H
 
-#include <shared_include.h>
 #include <QSqlDatabase>
-#include <QSqlError>
 #include <QSqlQuery>
 #include <QLatin1String>
-#include <QDir>
-#include <QChar>
-#include <QMessageBox>
-#include <QDateTime>
-#include <QUuid>
-#include <QFile>
+#include <QSqlError>
+#include <shared_include.h>
 
 static QDir imagesDir = QDir("resources/images");
 static QDir modelsDir = QDir("resources/models");

@@ -1,13 +1,11 @@
 ﻿#ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include "shared_include.h"
 #include <sqlitedb.h>
 #include <nrtexe.h>
 #include <usbcam.h>
 #include <predict.h>
-
-#include <QSqlError>
+#include "shared_include.h"
 
 struct Mat_With_Name
 {
@@ -73,11 +71,6 @@ private slots:
     void setTabelColumn(bool flag);
     void resultItemClicked(int row, int col);
     void resultVerClicked(int row);
-//    void on_btn_save_img_result_clicked();
-    void setModelInfo(bool flag, QString model_name);
-    void setClassTable(bool flag);
-    void tableItemClicked(int row, int col);
-    void tableItemChanged(int row, int col);
     void setSaveStautus();
 
     void setImgShowTimeEditEnable(bool flag);
@@ -100,8 +93,6 @@ private slots:
 
     void on_btn_select_single_mode_clicked();
     void set_model_started();
-    void set_model_completed();
-    void set_model_completed_ens();
 
     void on_btn_img_input_clicked();
     void on_btn_img_output_clicked();
@@ -135,6 +126,14 @@ private slots:
     bool is_ready_for_inf(NrtExe*m_nrt_ptr);
     void select_gpu(NrtExe* nrt_ptr, QString msg);
     void on_com_video_list_currentTextChanged(const QString& text);
+    void setUiForEnsmble();
+    void setUiForSingle();
+    void on_btn_model_settings_clicked();
+
+    void prob_threshold_dialog(NrtExe* nrt_ptr);
+    void size_threshold_dialog(NrtExe* ntr_ptr);
+
+    void ensmble_model_start();
 
 private:
     Ui::MainWindow *ui;
@@ -179,8 +178,6 @@ private:
     bool macro_flag = false;
     bool macro_cam_flag = false;
 
-    bool class_table_availbale = false;
-
     // SQLite Databse class
     std::shared_ptr<sqliteDB> m_db = std::make_shared<sqliteDB>();
 
@@ -195,6 +192,11 @@ private:
     bool insert_new_model_flag = false;
 
     QStringList video_list = {};
+
+    QPieSeries* series;
+    QChart* chart;
+    QVector<int> class_ratio;
+
 };
 
 #endif // MAINWINDOW_H
