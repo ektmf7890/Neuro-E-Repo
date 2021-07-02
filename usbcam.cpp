@@ -164,7 +164,7 @@ void UsbCam::setVideoCapture(int videoIdx) {
 //    cv::VideoCaptureAPIs videoCapAPI = cv::CAP_ANY;
 //    cv::VideoCaptureAPIs videoCapAPI = cv::CAP_V4L2;
 
-    m_cap.open(videoIdx, cv::CAP_MSMF);
+    m_cap.open(videoIdx, cv::CAP_GSTREAMER);
 }
 
 void UsbCam::setWidth(int width) {

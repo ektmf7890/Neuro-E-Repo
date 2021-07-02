@@ -128,8 +128,7 @@ int sqliteDB::InsertImageSet(QString name){
     }
 }
 
-int sqliteDB::InsertImage(QString imagePath, QString name, int height, int width, int imageSetID){
-    QString db_connection = "save_thread";
+int sqliteDB::InsertImage(QString imagePath, QString name, int height, int width, int imageSetID, QString db_connection){
     if(ConfirmDBConnection(db_connection).type() != QSqlError::NoError){
         qDebug() << "Failed to insert image: " << name;
         return -1;
@@ -324,6 +323,10 @@ int sqliteDB::getEvaluationSetID(int imageSetId, int modelId, int ensmbleModelId
     q.addBindValue(modelId);
     q.addBindValue(ensmbleModelId);
 
+    if(!q.exec()){
+        qDebug() << "getModelPath" << q.lastError().text();
+    }
+
     while(q.next()){
         int id = q.value(0).toInt();
         return id;
@@ -379,3 +382,120 @@ QString sqliteDB::getModelName(int modelId){
 
     return "";
 }
+
+QString sqliteDB::getImageSetName(int imageSetId){
+    QString db_connection = "main_thread";
+    if(ConfirmDBConnection(db_connection).type() != QSqlError::NoError){
+        qDebug() << "getModelName) DB Connection Failed.";
+        return "";
+    }
+
+    QSqlQuery q(QSqlDatabase::database(db_connection));
+
+    q.prepare("SELECT Name FROM ImageSets WHERE Id=?");
+    q.addBindValue(imageSetId);
+
+    if(!q.exec()){
+        qDebug() << "getImageSetName) " << q.lastError().text();
+        return "";
+    }
+
+    while(q.next()){
+        return q.value(0).toString();
+    }
+
+    return "";
+}
+
+QVector<int> sqliteDB::getImageIdVector(int imageSetId, QString db_connection){
+    QVector<int> imageIdVector;
+
+    if(ConfirmDBConnection(db_connection).type() != QSqlError::NoError){
+        qDebug() << "getImageIdVector) DB Connection Failed.";
+        return QVector<int>();
+    }
+
+    QSqlQuery q(QSqlDatabase::database(db_connection));
+
+    q.prepare("SELECT Id FROM Images WHERE ImageSetId = ?");
+    q.addBindValue(imageSetId);
+
+    if(!q.exec()){
+        qDebug() << "getImageIdVector) " << q.lastError().text();
+    }
+
+    while(q.next()){
+        int id = q.value(0).toInt();
+        imageIdVector.append(id);
+    }
+    return imageIdVector;
+}
+
+QString sqliteDB::getImagePath(int imageId, QString db_connection){
+    if(ConfirmDBConnection(db_connection).type() != QSqlError::NoError){
+        qDebug() << "getImagePath) DB Connection Failed.";
+        return "";
+    }
+
+    QSqlQuery q(QSqlDatabase::database(db_connection));
+
+    q.prepare("SELECT ImagePath FROM Images WHERE Id = ?");
+    q.addBindValue(imageId);
+
+    if(!q.exec()){
+        qDebug() << "getImagePath) " << q.lastError().text();
+    }
+
+    while(q.next()){
+        return q.value(0).toString();
+    }
+
+    return "";
+}
+
+QString sqliteDB::getImageName(int imageId, QString db_connection){
+    if(ConfirmDBConnection(db_connection).type() != QSqlError::NoError){
+        qDebug() << "getImageName) DB Connection Failed.";
+        return "";
+    }
+
+    QSqlQuery q(QSqlDatabase::database(db_connection));
+
+    q.prepare("SELECT Name FROM Images WHERE Id = ?");
+    q.addBindValue(imageId);
+
+    if(!q.exec()){
+        qDebug() << "getImageName) " << q.lastError().text();
+    }
+
+    while(q.next()){
+        return q.value(0).toString();
+    }
+
+    return "";
+}
+
+QString sqliteDB::getResultImagePath(int imageId, int evaluationSetId, QString db_connection){
+    if(ConfirmDBConnection(db_connection).type() != QSqlError::NoError){
+        qDebug() << "getResultImagePath) DB Connection Failed.";
+        return "";
+    }
+
+    QSqlQuery q(QSqlDatabase::database(db_connection));
+
+    q.prepare("SELECT ResultImagePath FROM ResultItems WHERE ImageId = ? AND EvaluationSetId = ?");
+    q.addBindValue(imageId);
+    q.addBindValue(evaluationSetId);
+
+    if(!q.exec()){
+        qDebug() << "getResultImagePath) " << q.lastError().text();
+    }
+
+    while(q.next()){
+        return q.value(0).toString();
+    }
+
+    return "";
+}
+
+

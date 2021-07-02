@@ -11,6 +11,7 @@ struct Mat_With_Name
 {
     cv::Mat image;
     std::string name;
+    int imageId;
 };
 
 struct Share_Mat
@@ -19,14 +20,11 @@ struct Share_Mat
     std::mutex _mutex;
 
     std::queue<Mat_With_Name> org_buffer;     // CAM Mode
-//    std::queue<Mat_With_Name> cam_buffer;     // CLA
     std::queue<Mat_With_Name> mask_buffer;    // SEG
     std::queue<Mat_With_Name> pred_buffer;    // CLA, SEG, DET, OCR, ANO
 
     std::queue<vector<std::string>> row_buffer;
     bool save_csv_flag;
-
-    string save_path;
 
     int imageSetId;
     int evaluationSetId;
@@ -65,7 +63,6 @@ private slots:
 
     void setCamSelectEnabled(bool flag);
     void setCamControlEnabled(bool flag);
-    void setCamSaveEditEnabled(bool flag);
     void setCamSaveChangeEnabled(bool flag);
     bool checkCanSave();
     void setTabelColumn(bool flag);
@@ -73,7 +70,6 @@ private slots:
     void resultVerClicked(int row);
     void setSaveStautus();
 
-    void setImgShowTimeEditEnable(bool flag);
     void setImgInference(bool flag);
     void setImgResultShow(bool flag);
 
@@ -89,21 +85,13 @@ private slots:
     void on_rad_cam_rtmode_clicked();
     void on_rad_cam_autosave_clicked();
 
-    void on_chb_show_prediction_clicked();
-
     void on_btn_select_single_mode_clicked();
     void set_model_started();
 
-    void on_btn_img_input_clicked();
-    void on_btn_img_output_clicked();
     void on_cbx_set_show_time_stateChanged(int arg1);
     void on_btn_img_play_clicked();
     void on_btn_img_pause_clicked();
     void on_btn_img_stop_clicked();
-
-    void on_btn_show_img_result_clicked();
-
-    void on_spb_img_cur_idx_valueChanged(int arg1);
 
     void on_btn_show_prediction_clicked();
 
@@ -128,12 +116,20 @@ private slots:
     void on_com_video_list_currentTextChanged(const QString& text);
     void setUiForEnsmble();
     void setUiForSingle();
-    void on_btn_model_settings_clicked();
 
     void prob_threshold_dialog(NrtExe* nrt_ptr);
     void size_threshold_dialog(NrtExe* ntr_ptr);
 
     void ensmble_model_start();
+
+    bool on_btn_select_image_set_clicked();
+    void on_com_image_list_currentIndexChanged(int index);
+    void on_spb_img_cur_idx_valueChanged(int i);
+    void on_btn_model_settings_clicked();
+    void on_rad_img_save_mode_toggled(bool checked);
+    void on_rad_img_rtmode_toggled(bool checked);
+
+    void verticalResizeTable(QTableView* table_view);
 
 private:
     Ui::MainWindow *ui;
@@ -147,28 +143,18 @@ private:
     QFuture<QString> future;
     QFuture<QString> futureEns;
 
-    // Image input and output folder directory.
-    std::shared_ptr<QString> m_input_path;
-    std::shared_ptr<QString> m_output_path;
-
     // Video Input Capture Object
     cv::VideoCapture m_videoInputCap;
     QString video_filename;
-    int frameRate = 30;
-
-    bool video_mode_flag = false;
-    bool cam_mode_flag = false;
 
     bool show_result_table = false;
     bool show_pred_flag = true;
 
-    bool mode_flag = false; // false: CAM Mode, true: IMG Mode
-
     bool cur_save_flag = false;  // true: push to buffer
     bool cam_autosave_flag = false;  // false: Realtime, true: Save
-    bool cam_mansave_flag = false;
 
-    QStringList inf_img_list;
+    bool img_save_flag = false;
+
     bool img_show_time_flag = false; // true: show each image in setted show time
     bool img_inf_ing_flag = false;
 
@@ -189,6 +175,14 @@ private:
     static const int INF_MODE_DET_CLA = 1;
     int inf_mode_status = INF_MODE_NONE;
 
+    // video mode, cam mode, image mode
+    static const int MEDIA_MODE_NONE = -1;
+    static const int MEDIA_MODE_CAM = 0;
+    static const int MEDIA_MODE_VIDEO_FOLDER = 1;
+    static const int MEDIA_MODE_VIDEO_FILE = 2;
+    static const int MEDIA_MODE_IMAGE = 3;
+    int media_mode = MEDIA_MODE_NONE;
+
     bool insert_new_model_flag = false;
 
     QStringList video_list = {};
@@ -196,6 +190,9 @@ private:
     QPieSeries* series;
     QChart* chart;
     QVector<int> class_ratio;
+
+    QStringList inf_image_list;
+    QVector<int> inf_image_id;
 
 };
 

@@ -19,6 +19,8 @@ QVector<QColor> COLOR_VECTOR;
 int currentModelId = -1, ensmbleModelId;
 int ensmble_crop_size = 128;
 
+bool ready_for_inference = false;
+
 int COLOR_COL = 0, NAME_COL = 1, PROB_THRES_COL = 5, WIDTH_COL = 2, HEIGHT_COL = 4, AND_OR_COL = 3;
 cv::Scalar red(0, 0, 255);
 cv::Scalar green(0, 255, 0);
@@ -145,14 +147,14 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->rad_cam_autosave->setToolTip("Auto save option is avavilable only when model is loaded.");
 
     // IMG Mode Style
-    setImgShowTimeEditEnable(false);
+//    setImgShowTimeEditEnable(false);
 
     // IMG Icon
     ui->btn_img_mode->setIcon(QIcon(":/icons/img_tab.png"));
     ui->btn_img_mode->setToolTip("IMG Mode");
     ui->btn_img_mode->setIconSize(ui->btn_img_mode->size());
 
-    ui->edit_img_name->setReadOnly(true);
+//    ui->edit_img_name->setReadOnly(true);
     ui->edit_set_show_time->setValidator(new QDoubleValidator(TERM_MIN, TERM_MAX, 1, this));
 
 //    ui->spb_img_cur_idx->setReadOnly(true);
@@ -160,12 +162,12 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->btn_img_play->setIconSize(QSize(ui->btn_img_play->height()*0.45, ui->btn_img_play->height()*0.45));
     ui->btn_img_pause->setIcon(QIcon(":/icons/cam_pause.png"));
     ui->btn_img_pause->setIconSize(QSize(ui->btn_img_pause->height()*0.45, ui->btn_img_pause->height()*0.45));
-    ui->btn_img_pause->setEnabled(false);
     ui->btn_img_stop->setIcon(QIcon(":/icons/cam_stop.png"));
     ui->btn_img_stop->setIconSize(QSize(ui->btn_img_stop->height()*0.45, ui->btn_img_stop->height()*0.45));
-    ui->btn_img_result->setIcon(QIcon(":/icons/img_res.png"));
-    ui->btn_img_result->setIconSize(QSize(ui->btn_img_result->height()*0.8, ui->btn_img_result->height()*0.8));
-    ui->btn_img_result->setEnabled(false);
+
+    ui->btn_img_play->setEnabled(false);
+    ui->btn_img_pause->setEnabled(false);
+    ui->btn_img_stop->setEnabled(false);
 
     // Model Property Style
     ui->cbx_select_fp16->setToolTip("Slower when creating Executor, but Faster when predicting Img");
@@ -178,21 +180,23 @@ MainWindow::MainWindow(QWidget *parent) :
         m_db.reset();
     }
 
-    // video mode flag, cam mode flag init
-    if(ui->com_cam_input_select->currentText().toStdString() == SINGLE_VIDEO_TEXT || ui->com_cam_input_select->currentText().toStdString() == VIDEO_FOLDER_TEXT){
-        video_mode_flag = true;
-        cam_mode_flag =false;
-    }
-    else if(ui->com_cam_input_select->currentText().toStdString() == CAMERA_TEXT){
-        video_mode_flag = false;
-        cam_mode_flag = true;
-    }
-
     ui->com_video_list->hide();
     ui->com_video_list->setSizeAdjustPolicy(QComboBox::AdjustToContents);
     ui->inf_numbers->hide();
 
+    ui->com_image_list->hide();
+    ui->com_image_list->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    ui->spb_img_cur_idx->hide();
+    ui->lab_img_total_num->hide();
+
     ui->btn_model_settings->hide();
+    ui->btn_model_settings->setIcon(QIcon(":/icons/model_settings.png"));
+
+    ui->Mode_Setting_Stack->setCurrentIndex(0);
+    ui->Img_Option->setCurrentWidget(ui->SelectImagesetPage);
+
+    ui->rad_img_rtmode->setChecked(true);
+    ui->rad_img_save_mode->setToolTip("Save option is only available when model is loaded.");
 }
 
 MainWindow::~MainWindow()
@@ -250,19 +254,8 @@ void MainWindow::setCamControlEnabled(bool flag) {
     ui->btn_cam_stop->setEnabled(flag);
 }
 
-void MainWindow::setCamSaveEditEnabled(bool flag) {
-    ui->rad_cam_rtmode->setEnabled(flag);
-    ui->rad_cam_autosave->setEnabled(flag);
-//    ui->rad_cam_savemode->setEnabled(flag);
-//    ui->edit_cam_save_term->setEnabled(flag);
-//    ui->edit_cam_save->setEnabled(flag);
-//    ui->btn_cam_save->setEnabled(flag);
-//    if (flag)
-//        ui->edit_cam_save->setText("");
-}
-
 void MainWindow::setCamSaveChangeEnabled(bool flag) {  // Can be Changed Part when Paused
-    ui->rad_cam_rtmode->setEnabled(flag);
+    //ui->rad_cam_rtmode->setEnabled(flag);
 //    ui->rad_cam_savemode->setEnabled(flag);
 //    ui->edit_cam_save_term->setEnabled(flag);
 //    if (flag) {
@@ -299,22 +292,12 @@ bool MainWindow::checkCanSave() {
 
 /*** IMG Setting Method (ISM) ***/
 
-void MainWindow::setImgShowTimeEditEnable(bool flag) {
-    ui->edit_set_show_time->setEnabled(flag);
-    ui->lab_set_show_time->setEnabled(flag);
-}
-
 void MainWindow::setImgInference(bool flag) {
-    ui->btn_img_input->setEnabled(!flag);
-    ui->edit_img_input->setEnabled(!flag);
-    ui->btn_img_output->setEnabled(!flag);
-    ui->edit_img_output->setEnabled(!flag);
     ui->cbx_set_show_time->setEnabled(!flag);
-    setImgShowTimeEditEnable(!flag);
+//    ui->edit_set_show_time->setEnabled(!flag);
+//    ui->lab_set_show_time->setEnabled(!flag);
 
-    ui->spb_img_cur_idx->setReadOnly(flag);
-    ui->btn_img_pause->setEnabled(flag);
-    ui->btn_img_stop->setEnabled(flag);
+//    ui->spb_img_cur_idx->setReadOnly(flag);
     if (!flag)
         setImgResultShow(false);
 }
@@ -322,7 +305,6 @@ void MainWindow::setImgInference(bool flag) {
 void MainWindow::setImgResultShow(bool flag) {
     // setImageResultShow(true) -> set the img index spinbox to Write Available, image result buttoned Enabled
     ui->spb_img_cur_idx->setReadOnly(!flag);
-    ui->btn_img_result->setEnabled(flag);
 }
 
 /*** Butttons that locate above result image ***/
@@ -339,14 +321,14 @@ void MainWindow::on_btn_show_prediction_clicked()
     }
 
     if (m_timer.use_count() > 0) {  // Inferencing
-        if (!mode_flag) {   // CAM Mode
+        if (media_mode == MEDIA_MODE_CAM) {   // CAM Mode
             qDebug() << "CAM Mode) Show Prediction Icon Clicked";
         }
         else {              // IMG Mode
             qDebug() << "IMG Mode) Show Prediction Icon Clicked";
             //showResult();
 
-            int cur_inf_img_idx = ui->spb_img_cur_idx->value();
+            /*int cur_inf_img_idx = ui->spb_img_cur_idx->value();
             if (cur_inf_img_idx < 1 || cur_inf_img_idx > inf_img_list.size())
                 return;
             std::string cur_inf_img_path = inf_img_list[cur_inf_img_idx-1].toStdString();
@@ -371,30 +353,8 @@ void MainWindow::on_btn_show_prediction_clicked()
                 m_qimage = QImage((const unsigned char*) (PRED_IMG.data), PRED_IMG.cols, PRED_IMG.rows, PRED_IMG.step, QImage::Format_RGB888);
             QPixmap m_qpixmap = QPixmap::fromImage(m_qimage);
             ui->lab_show_res->setPixmap(m_qpixmap.scaled(ui->lab_show_res->width(), ui->lab_show_res->height(), Qt::KeepAspectRatio));
-            qDebug() << "IMG Mode) IMG Change";
+            qDebug() << "IMG Mode) IMG Change";*/
         }
-    }
-}
-
-
-void MainWindow::on_btn_show_img_result_clicked()
-{
-    if (show_result_table) {    // Show -> Unshow
-        show_result_table = false;
-
-        ui->Show_Res_Table->hide();
-
-        ui->lab_show_res->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
-        ui->lab_show_res->setSizeIncrement(ui->Show->width(), ui->Show->height());
-    }
-    else {                      // Unshow -> Show
-        show_result_table = true;
-
-        ui->gridLayout->removeWidget(ui->Show_Res_Table);
-        ui->Show_Res_Table->setMinimumWidth((int)(ui->Show->width()/2));
-        ui->gridLayout->addWidget(ui->Show_Res_Table, 0, 0, Qt::AlignRight);
-        ui->Show_Res_Table->setSizeIncrement((int)(ui->Show->width()/2), ui->Show->height());
-        ui->Show_Res_Table->show();
     }
 }
 
@@ -475,14 +435,14 @@ void MainWindow::resultItemClicked(int row, int col) {
 }
 
 void MainWindow::resultVerClicked(int row) {
-    if (mode_flag) {    // IMG Mode
+    /*if (media_mode == MEDIA_MODE_IMAGE) {    // IMG Mode
         ui->spb_img_cur_idx->setValue(row+1);
         return;
     }
 
     QString cur_img_name = ui->tableWidget_result->verticalHeaderItem(row)->text();
 //    QString output_fol = (!mode_flag ? ui->edit_cam_save->text() : ui->edit_img_output->text());
-    QString output_fol = (!mode_flag ? "HAHA" : ui->edit_img_output->text());
+    QString output_fol = (media_mode != MEDIA_MODE_IMAGE? "HAHA" : ui->edit_img_output->text());
     std::string cur_img_path = output_fol.toStdString() + PathSeparator + PRED_FOL + cur_img_name.toStdString();
     cv::Mat cur_img = cv::imread(cur_img_path, cv::IMREAD_COLOR);
     if (cur_img.empty())
@@ -490,7 +450,7 @@ void MainWindow::resultVerClicked(int row) {
     cv::cvtColor(cur_img, cur_img, COLOR_RGB2BGR);
     QImage m_qimage = QImage((const unsigned char*) (cur_img.data), cur_img.cols, cur_img.rows, cur_img.step, QImage::Format_RGB888);
     QPixmap m_qpixmap = QPixmap::fromImage(m_qimage);
-    ui->lab_show_res->setPixmap(m_qpixmap.scaled(ui->lab_show_res->width(), ui->lab_show_res->height(), Qt::KeepAspectRatio));
+    ui->lab_show_res->setPixmap(m_qpixmap.scaled(ui->lab_show_res->width(), ui->lab_show_res->height(), Qt::KeepAspectRatio));*/
 }
 
 /* Loop for Save Images */
@@ -505,7 +465,7 @@ void MainWindow::save_worker() {
         vector<std::string> new_row;
 
         // insert new row in Images table
-        int imageId;
+        int imageId = -1;
         if(!m_save_info.org_buffer.empty()){
             org_mwn = m_save_info.org_buffer.front();
             m_save_info.org_buffer.pop();
@@ -544,6 +504,12 @@ void MainWindow::save_worker() {
             cv::imwrite(pred_path.toStdString(), pred_mwn.image);
 
             qDebug() << "Save thread) Saving image " << pred_mwn.name.c_str();
+
+            // image id가 -1이면 이미지 save 모드에서 org img를 저장하는 과정을 거치지 않은 경우임.
+            // mat with name에 저장된 image id 참고 필요.
+            if(imageId == -1){
+                imageId = pred_mwn.imageId;
+            }
 
             resultItemID = m_db->InsertResultItem(pred_path, imageId, m_save_info.evaluationSetId);
         }
@@ -777,7 +743,7 @@ void MainWindow::segSetResults(nrt::NDBuffer merged_pred_output, cv::Mat &PRED_I
             QString classname = m_nrt->get_model_class_name(rect_class_index);
 
             if (!classname.isEmpty()) {
-                cv::putText(PRED_IMG, classname.toStdString(), cv::Point(rect_x, rect_y), FONT_HERSHEY_SIMPLEX, 1, class_color_scalar, 4);
+                cv::putText(PRED_IMG, classname.toStdString(), cv::Point(rect_x, rect_y), FONT_HERSHEY_SIMPLEX, 0.6 , class_color_scalar, 1);
             }
         }
 
@@ -789,12 +755,19 @@ void MainWindow::segSetResults(nrt::NDBuffer merged_pred_output, cv::Mat &PRED_I
         total_pixel = img_h * img_w;
         int cur_ofs, cur_class;
         double alp_src = 0.5, alp_mask = 0.5;
-//        auto shape = merged_pred_output.get_shape();
+
+        nrt::Shape shape = merged_pred_output.get_shape();
+        qDebug() << "merged pred output shape: [";
+        for(int i=0; i < shape.num_dim; i++){
+            qDebug() << shape.dims[i] << " ";
+        }
+        qDebug() << "]";
+
         for (int h = 0; h < img_h; h++) {
             cur_ofs = h * img_w;
             for (int w = 0; w < img_w; w++) {
                 cur_class = output_ptr[cur_ofs + w];
-                if (cur_class < 1 || cur_class > m_nrt->get_model_class_num()){
+                if (cur_class < 1 || cur_class >= m_nrt->get_model_class_num()){
                     continue;
                 }
                 exist_class[cur_class-1] = true;
@@ -1283,6 +1256,7 @@ void MainWindow::detClaEnsmbleSetResults(nrt::NDBufferList outputs, cv::Mat &PRE
 
 void MainWindow::showResult() {
     cv::Mat ORG_IMG, PRED_IMG;
+    Mat_With_Name org_mwn, pred_mwn;
     QString cur_inf_img_path;
 
     vector<std::string> new_row;
@@ -1290,6 +1264,7 @@ void MainWindow::showResult() {
 
     int cur_mode = ui->Mode_Setting_Stack->currentIndex();
 
+    bool img_mode_end = false;
     if (cur_mode == 0) {
         // Realtime Camera Mode
         if (ui->com_cam_input_select->currentText().toStdString() == CAMERA_TEXT) {
@@ -1338,25 +1313,29 @@ void MainWindow::showResult() {
     }
 
     else if (cur_mode == 1) {
-        int cur_inf_img_idx = ui->spb_img_cur_idx->value();
-        if (cur_inf_img_idx < 0 || cur_inf_img_idx >= inf_img_list.size()) {
+        int cur_inf_img_idx = ui->spb_img_cur_idx->value() - 1;
+        org_mwn.imageId = inf_image_id[cur_inf_img_idx];
+        pred_mwn.imageId = inf_image_id[cur_inf_img_idx];
+
+        if (cur_inf_img_idx < 0 || cur_inf_img_idx >= inf_image_list.size()) {
             if(m_timer)
                 m_timer->stop();
-            img_inf_ing_flag = false;
             return;
         }
 
-        if (!(macro_flag && !macro_cam_flag))
-            ui->spb_img_cur_idx->setValue(cur_inf_img_idx+1);
+        if (!(macro_flag && !macro_cam_flag)){
+            ui->spb_img_cur_idx->setValue(cur_inf_img_idx + 1);
+            ui->com_image_list->setCurrentIndex(cur_inf_img_idx + 1);
+        }
 
-        if (cur_inf_img_idx == 0 && macro_cam_flag)
-            ui->spb_img_cur_idx->setRange(1, ui->spb_img_cur_idx->maximum());
+//        if (cur_inf_img_idx == 0 && macro_cam_flag)
+//            ui->spb_img_cur_idx->setRange(1, ui->spb_img_cur_idx->maximum());
 
-        cur_inf_img_path = inf_img_list[cur_inf_img_idx];
+        cur_inf_img_path = inf_image_list[cur_inf_img_idx];
         cur_img_name = cur_inf_img_path.split(QDir::separator()).last();
-        qDebug() << "[" << cur_inf_img_idx << "] " << inf_img_list[cur_inf_img_idx];
+        qDebug() << "[" << cur_inf_img_idx << "] " << inf_image_list[cur_inf_img_idx];
 
-        ORG_IMG = cv::imread(cur_inf_img_path.toStdString(), cv::IMREAD_COLOR);
+        ORG_IMG = cv::imread(cur_inf_img_path.toLocal8Bit().constData(), cv::IMREAD_COLOR);
         qDebug() << "Show Result) Imread";
 
         if (ORG_IMG.empty()) {
@@ -1364,20 +1343,18 @@ void MainWindow::showResult() {
                 m_timer->stop();
             return;
         }
-        if (cur_inf_img_idx == (inf_img_list.size()-1)) {
-            /*** FOR AI EXPO ***/
+        if (cur_inf_img_idx == (inf_image_list.size()-1)) {
             if (macro_flag) {
-                std::random_shuffle(inf_img_list.begin(),inf_img_list.end());
-                ui->spb_img_cur_idx->setRange(0, inf_img_list.size());
-                ui->spb_img_cur_idx->setValue(0);
+//                std::random_shuffle(inf_image_list.begin(),inf_image_list.end());
+//                ui->spb_img_cur_idx->setRange(1, inf_image_list.size());
+                ui->spb_img_cur_idx->setValue(1);
             }
             else {
-                if(m_timer)
+                if(m_timer){
                     m_timer->stop();
-                setImgResultShow(true); // inference result button enabled & iagme index spinbox write enabled
-                img_inf_ing_flag = false;
+                }
+                img_mode_end = true;
             }
-            /*******************/
         }
     }
 
@@ -1389,10 +1366,40 @@ void MainWindow::showResult() {
 
     std::chrono::duration<double, std::milli> inf_time;
     QString model_type;
-    if(m_nrt.use_count() > 0 && is_ready_for_inf(m_nrt.get())){
+
+    if(ready_for_inference){
+        if(m_nrt.use_count() > 0 && is_ready_for_inf(m_nrt.get()))
         model_type = m_nrt->get_model_type();
 
         if(model_type == "Segmentation"){
+            // Non patch mode 이미지 리사이즈 처리
+            if(!m_nrt->is_model_patch_mode()){
+                nrt::Shape model_input_shape = m_nrt->get_model_input_shape(0);
+                int h = model_input_shape.dims[0];
+                int w = model_input_shape.dims[1];
+
+                nrt::InterpolationType inter = m_nrt->get_model_interpolty(0);
+                if(inter == nrt::INTER_NEAREST){
+                    cv::resize(ORG_IMG, ORG_IMG, cv::Size(w, h), 0, 0, cv::INTER_NEAREST);
+                    PRED_IMG = ORG_IMG.clone();
+                }
+                else if(inter == nrt::INTER_LINEAR){
+                    cv::resize(ORG_IMG, ORG_IMG, cv::Size(w, h), 0, 0, cv::INTER_LINEAR);
+                    PRED_IMG = ORG_IMG.clone();
+                }
+                else if(inter == nrt::INTER_AREA){
+                    cv::resize(ORG_IMG, ORG_IMG, cv::Size(w, h), 0, 0, cv::INTER_AREA);
+                    PRED_IMG = ORG_IMG.clone();
+                }
+                else if(inter == nrt::INTER_CUBIC){
+                    cv::resize(ORG_IMG, ORG_IMG, cv::Size(w, h), 0, 0, cv::INTER_CUBIC);
+                    PRED_IMG = ORG_IMG.clone();
+                }
+                else{
+                    return;
+                }
+            }
+
             nrt::NDBuffer img_buffer = get_img_buffer(ORG_IMG, m_nrt.get());
             merged_pred_output = seg_execute(img_buffer, inf_time, m_nrt.get());
             QString inf_time_str = QString::number(inf_time.count(), 'f', 3);
@@ -1429,18 +1436,17 @@ void MainWindow::showResult() {
                 anomSetResults(outputs, PRED_IMG, new_row);
             }
         }
-        else if(inf_mode_status == INF_MODE_DET_CLA && m_nrt_ensmble.use_count()>0 && is_ready_for_inf(m_nrt_ensmble.get())){
+        else if(inf_mode_status == INF_MODE_DET_CLA && m_nrt_ensmble.use_count() > 0 && is_ready_for_inf(m_nrt_ensmble.get())){
             detClaEnsmbleSetResults(outputs, PRED_IMG, new_row);
         }
     }
     else{
-        qDebug() << "Show Result) Model and executor is not loaded.";
+        qDebug() << "Show Result) Models are not loaded.";
     }
 
     cv::cvtColor(ORG_IMG, ORG_IMG, COLOR_RGB2BGR);
     cv::cvtColor(PRED_IMG, PRED_IMG, COLOR_RGB2BGR);
 
-    Mat_With_Name org_mwn, pred_mwn;
     org_mwn.image = ORG_IMG.clone();
     pred_mwn.image = PRED_IMG.clone();
 
@@ -1461,19 +1467,16 @@ void MainWindow::showResult() {
             m_save_info.row_buffer.push(new_row);
         }
     }
-    else if (cur_mode == 1) {   // IMG Mode
+    else if (cur_mode == 1 && img_save_flag) {
         qDebug() << "IMG Mode) Push Mat to buffer";
         std::unique_lock<std::mutex> lock(m_save_info._mutex);
 
-//        int pre_idx = ui->edit_img_input->text().size() + 1;
-//        std::string img_name = cur_inf_img_path.substr(pre_idx);
-        ui->edit_img_name->setText(cur_img_name);
-        org_mwn.name = cur_img_name.toStdString();
-        pred_mwn.name = cur_img_name.toStdString();
+        if(!macro_flag){
+            pred_mwn.name = cur_img_name.toStdString();
 
-        m_save_info.org_buffer.push(org_mwn);
-        m_save_info.pred_buffer.push(pred_mwn);
-        m_save_info.row_buffer.push(new_row);
+            m_save_info.pred_buffer.push(pred_mwn);
+            m_save_info.row_buffer.push(new_row);
+        }
     }
 
     // Show Result Task
@@ -1497,6 +1500,38 @@ void MainWindow::showResult() {
 
     QPixmap m_qpixmap = QPixmap::fromImage(m_qimage);
     ui->lab_show_res->setPixmap(m_qpixmap.scaled(ui->lab_show_res->width(), ui->lab_show_res->height(), Qt::KeepAspectRatio));
+
+    if(img_mode_end){
+        img_inf_ing_flag = false;
+        on_com_image_list_currentIndexChanged(0);
+
+        ui->spb_img_cur_idx->setReadOnly(false);
+        ui->com_image_list->setEditable(true);
+
+        ui->cbx_set_show_time->setEnabled(true);
+        ui->cbx_set_show_time->setChecked(false);
+
+        ui->btn_img_play->setEnabled(false);
+        ui->btn_img_pause->setEnabled(false);
+
+        // save evaluation json file
+        {
+            std::unique_lock<std::mutex> lock(m_save_info._mutex);
+
+            if(!m_save_info.json_file.open(QIODevice::WriteOnly | QIODevice::Truncate)){
+                qDebug()<<"Failed to open file.";
+                return;
+            }
+
+            m_save_info.json_doc.setObject(m_save_info.title);
+            m_save_info.json_file.write(m_save_info.json_doc.toJson());
+            m_save_info.json_file.close();
+        }
+
+        QMessageBox::information(this, "Notification",
+                    "The image inference is completed.\nYou can check the inference results if you chose save mode.",
+                    QMessageBox::Ok);
+    }
 }
 
 void MainWindow::initJson(int evaluationSetId){
@@ -1611,14 +1646,13 @@ bool MainWindow::configSaveSettings(){
 
     ui->rad_cam_rtmode->setChecked(false);
     cam_autosave_flag = true;
-    cam_mansave_flag = false;
 
     if(newImagesetFlag){
         QString imageSetName;
-        if(video_mode_flag){
+        if(media_mode == MEDIA_MODE_VIDEO_FILE || media_mode == MEDIA_MODE_VIDEO_FOLDER){
             imageSetName = "VIDEO_" + video_filename + "_ImageSet";
         }
-        else if(cam_mode_flag){
+        else if(media_mode == MEDIA_MODE_CAM){
             imageSetName = "CAM_" + QDateTime::currentDateTime().toString("dd-MM-yyyy hh:mm:ss") + "_ImageSet";
         }
         else{
@@ -1693,7 +1727,6 @@ void MainWindow::on_rad_cam_rtmode_clicked()
     }
     ui->rad_cam_autosave->setChecked(false);
     cam_autosave_flag = false;
-    cam_mansave_flag = false;
 }
 
 void MainWindow::on_rad_cam_autosave_clicked()
@@ -1714,7 +1747,6 @@ void MainWindow::on_rad_cam_autosave_clicked()
     if(configSaveSettings()){
         ui->rad_cam_rtmode->setChecked(false);
         cam_autosave_flag = true;
-        cam_mansave_flag = false;
     }
     else{
         ui->rad_cam_autosave->setChecked(false);
@@ -1725,54 +1757,30 @@ void MainWindow::on_rad_cam_autosave_clicked()
     }
 }
 
-void MainWindow::on_chb_show_prediction_clicked()
-{
-    /*
-    bool status = ui->chb_show_prediction->isChecked();
-    if (status) {
-        qDebug() << "CAM Mode) Show Prediction";
-        show_pred_flag = true;
-    }
-    else {
-        qDebug() << "CAM Mode) Don't Show Prediction";
-        show_pred_flag = false;
-    }
-    */
-}
-
 void MainWindow::on_btn_cam_mode_clicked()
 {
-    mode_flag = false; // false: Cam, true: Img
     ui->btn_cam_mode->setDefault(true);
     ui->btn_img_mode->setDefault(false);
-    //on_btn_cam_stop_clicked();
-    //on_btn_img_stop_clicked();
 
     ui->Mode_Setting_Stack->setCurrentIndex(0); // 0: Cam, 1: Img
 }
 
 void MainWindow::on_btn_img_mode_clicked()
 {
-    // 이전에 선택한 input path, output path가 있으면 다시 로드
-    if(m_input_path.use_count() > 0){
-        qDebug() << "There is previous input path";
-        ui->edit_img_input->setText(*m_input_path);
-    }
-    if(m_output_path.use_count() > 0){
-        qDebug() << "There is previous output path";
-        ui->edit_img_output->setText(*m_output_path);
-    }
-
-    mode_flag = true;
     ui->btn_cam_mode->setDefault(false);
     ui->btn_img_mode->setDefault(true);
-    //on_btn_cam_stop_clicked();
-    //on_btn_img_stop_clicked();
 
     if(ui->com_video_list->isVisible()){
         ui->com_video_list->clear();
         ui->com_video_list->hide();
+        video_list.clear();
+
+        if(m_videoInputCap.isOpened()){
+            m_videoInputCap.release();
+        }
     }
+    media_mode = MEDIA_MODE_NONE;
+    setCamControlEnabled(false);
 
     ui->Mode_Setting_Stack->setCurrentIndex(1);
 }
@@ -1790,11 +1798,10 @@ void MainWindow::on_btn_cam_select_clicked()
         m_usbCam = std::make_shared<UsbCam>();
         m_usbCam->selectCam();
         if (!m_usbCam->isExist()) {
-            if(cam_mode_flag)
-                cam_mode_flag = false;
+            media_mode = MEDIA_MODE_NONE;
             return;
         }
-        cam_mode_flag = true;
+        media_mode = MEDIA_MODE_CAM;
 
         showResult();
         setCamControlEnabled(true);
@@ -1814,6 +1821,7 @@ void MainWindow::on_btn_cam_select_clicked()
 
         if(video_filepath.isEmpty()){
             QMessageBox::information(this, "Notification", "No video was selected");
+            media_mode = MEDIA_MODE_NONE;
             return;
         }
 
@@ -1835,12 +1843,14 @@ void MainWindow::on_btn_cam_select_clicked()
                                      "Sorry. The video file is corupted.",
                                      QMessageBox::Ok);
             m_videoInputCap.release();
+            media_mode = MEDIA_MODE_NONE;
             return;
         }
 
         video_list.append(video_filepath);
         ui->com_video_list->setVisible(true);
         ui->com_video_list->addItem(video_filename);
+        media_mode = MEDIA_MODE_VIDEO_FILE;
 
         showResult();
         setCamControlEnabled(true);
@@ -1861,6 +1871,7 @@ void MainWindow::on_btn_cam_select_clicked()
                                      "Notification",
                                      "No folder was selected",
                                      QMessageBox::Ok);
+            media_mode = MEDIA_MODE_NONE;
             return;
         }
 
@@ -1891,8 +1902,11 @@ void MainWindow::on_btn_cam_select_clicked()
                                      "Sorry. The video file is corrupted.",
                                      QMessageBox::Ok);
             m_videoInputCap.release();
+            media_mode = MEDIA_MODE_NONE;
             return;
         }
+
+        media_mode = MEDIA_MODE_VIDEO_FOLDER;
 
         showResult();
         setCamControlEnabled(true);
@@ -1904,24 +1918,19 @@ void MainWindow::on_btn_cam_play_clicked()
 {
     qDebug() << "come cam play";
 
-    // Camera Mode
-    if (cam_mode_flag && m_usbCam.use_count() <= 0) {
+    if (media_mode == MEDIA_MODE_CAM && m_usbCam.use_count() <= 0) {
         qDebug() << "Cam mode but camera is not open.";
         return;
     }
 
-    //Video Mode
-    if(video_mode_flag && !m_videoInputCap.isOpened()){
-        // video folder mode
-        QString current_mode = ui->com_cam_input_select->currentText();
-        if(current_mode.toStdString() == VIDEO_FOLDER_TEXT || current_mode.toStdString() == SINGLE_VIDEO_TEXT){
+    else if(media_mode == MEDIA_MODE_VIDEO_FILE || media_mode == MEDIA_MODE_VIDEO_FOLDER){
+        if(!m_videoInputCap.isOpened()){
             on_com_video_list_currentTextChanged(ui->com_video_list->currentText());
         }
+    }
 
-        else{
-            qDebug() << "Video mode but capture is not open.";
-            return;
-        }
+    else if(media_mode == MEDIA_MODE_NONE){
+        return;
     }
 
     if (m_timer.use_count() <= 0) { // First Connect with showResult()
@@ -1944,7 +1953,6 @@ void MainWindow::on_btn_cam_play_clicked()
         }
 
         setCamSelectEnabled(false);
-        setCamSaveEditEnabled(false);
 
         if (m_timer.use_count() == 0)
             m_timer = make_shared<QTimer>(this);
@@ -1954,7 +1962,7 @@ void MainWindow::on_btn_cam_play_clicked()
         m_timer->setInterval(0);
         m_timer->start();
 
-        if(m_usbCam.use_count() >0 )
+        if(m_usbCam.use_count() > 0 )
             m_usbCam->playCam();
 
         setTabelColumn(true);
@@ -1977,9 +1985,6 @@ void MainWindow::on_btn_cam_play_clicked()
         setCamSaveChangeEnabled(false);
         m_timer->setInterval(0);
         m_timer->start();
-
-        if(cam_mode_flag)
-            m_usbCam->playCam();
     }
     ui->btn_img_mode->setEnabled(false);
     ui->btn_select_single_mode->setEnabled(false);
@@ -1995,15 +2000,11 @@ void MainWindow::on_btn_cam_pause_clicked()
     if (m_timer->isActive()) {
         qDebug() << "CAM Mode) Pause";
         m_timer->stop();
-        if(cam_mode_flag && m_usbCam->isExist())
-            m_usbCam->pauseCam();
 
     }
 
     if (m_save_timer.use_count() > 0)
         m_save_timer->stop();
-
-    setCamSaveChangeEnabled(true);
 }
 
 void MainWindow::on_btn_cam_stop_clicked()
@@ -2020,8 +2021,8 @@ void MainWindow::on_btn_cam_stop_clicked()
 
     if (m_usbCam.use_count() > 0) {
         qDebug() << "CAM Mode) Delete CAM";
+        media_mode = MEDIA_MODE_NONE;
         m_usbCam.reset();
-        cam_mode_flag = false;
     }
 
     if(m_videoInputCap.isOpened()){
@@ -2033,7 +2034,6 @@ void MainWindow::on_btn_cam_stop_clicked()
     if(ui->com_cam_input_select->currentText().toStdString() == CAMERA_TEXT){
         setCamControlEnabled(false);
     }
-    setCamSaveEditEnabled(true);
 
     ui->lab_result_info->setText("There is no table to show.");
     setTabelColumn(false);
@@ -2083,7 +2083,7 @@ void MainWindow::on_btn_cam_stop_clicked()
     ui->com_video_list->setEnabled(true);
 }
 
-void MainWindow::on_btn_img_input_clicked()
+/*void MainWindow::on_btn_img_input_clicked()
 {
     QMessageBox *err_msg = new QMessageBox;
     err_msg->setFixedSize(600, 400);
@@ -2091,11 +2091,6 @@ void MainWindow::on_btn_img_input_clicked()
     QString inputPath = QFileDialog::getExistingDirectory(this, tr("Select Input Folder"), QDir::homePath());
     if (inputPath.isNull())
         return;
-    if( m_input_path.use_count() > 0 ) {
-        m_input_path.reset();
-    }
-    m_input_path = std::make_shared<QString>(inputPath);
-
     QDir input_dir(inputPath);
     QStringList img_filters;
     int inf_img_num;
@@ -2117,7 +2112,6 @@ void MainWindow::on_btn_img_input_clicked()
         return;
     }
 
-    ui->edit_img_input->setText(inputPath);
     ui->lab_img_total_num->setText("/ " + QString::number(inf_img_num));
     ui->spb_img_cur_idx->setRange(0, inf_img_num);
     ui->spb_img_cur_idx->setValue(0);
@@ -2126,7 +2120,6 @@ void MainWindow::on_btn_img_input_clicked()
     collator.setNumericMode(true);
     std::sort(inf_img_list.begin(), inf_img_list.end(), collator);
 
-    /*** FOR AI EXPO ***/
     if (inputPath.contains(QString("Expo"))) {
         std::random_shuffle(inf_img_list.begin(),inf_img_list.end());
         macro_flag = true;
@@ -2134,8 +2127,6 @@ void MainWindow::on_btn_img_input_clicked()
     else {
         macro_flag = false;
     }
-    /*******************/
-
     //for (int i = 0; i < inf_img_num; i++)
     //    qDebug() << inf_img_list[i];
 
@@ -2145,9 +2136,9 @@ void MainWindow::on_btn_img_input_clicked()
 //    movie->~QMovie();
 //    lbl->~QLabel();
     delete err_msg;
-}
+}*/
 
-void MainWindow::on_btn_img_output_clicked()
+/*void MainWindow::on_btn_img_output_clicked()
 {
     QString outputPath = QFileDialog::getExistingDirectory(this, tr("Select Output Folder"), QDir::homePath());
     if (outputPath.isNull())
@@ -2160,21 +2151,17 @@ void MainWindow::on_btn_img_output_clicked()
     if (!QDir(pred_fol_path).exists())
         QDir().mkdir(pred_fol_path);
 
-    if( m_output_path.use_count() > 0 ) {
-        m_output_path.reset();
-    }
-    m_output_path = std::make_shared<QString>(outputPath);
-
-    ui->edit_img_output->setText(outputPath);
-}
+}*/
 
 void MainWindow::on_cbx_set_show_time_stateChanged(int state)
 {
     if (state == Qt::Unchecked) {
-        setImgShowTimeEditEnable(false);
+        ui->edit_set_show_time->setEnabled(false);
+        ui->lab_set_show_time->setEnabled(false);
     }
     else if (state == Qt::Checked) {
-        setImgShowTimeEditEnable(true);
+        ui->edit_set_show_time->setEnabled(true);
+        ui->lab_set_show_time->setEnabled(true);
     }
 }
 
@@ -2182,24 +2169,10 @@ void MainWindow::on_btn_img_play_clicked()
 {
     QMessageBox *err_msg = new QMessageBox;
     err_msg->setFixedSize(600, 400);
+
     int img_show_time = 0;
-    std::string img_save_path;
-    img_inf_ing_flag = true;
 
-    if (m_timer.use_count() <= 0) { // First Connect with showResult()
-        if (!m_input_path) {
-            err_msg->critical(0,"Error", "Please set input folder.");
-            on_btn_img_input_clicked();
-            return;
-        }
-        if (!m_output_path) {
-            err_msg->critical(0,"Error", "Please set output folder.");
-            on_btn_img_output_clicked();
-            return;
-        }
-        else
-            img_save_path = ui->edit_img_output->text().toStdString();
-
+    if (m_timer.use_count() <= 0) {
         if (ui->cbx_set_show_time->isChecked()) {
             if (ui->edit_set_show_time->text() == "") {
                 err_msg->critical(0,"Error", "Please set show time or unselect set show time.");
@@ -2214,36 +2187,34 @@ void MainWindow::on_btn_img_play_clicked()
             }
         }
 
-        if (m_nrt.use_count()>0 && m_nrt->get_model_status() != nrt::STATUS_SUCCESS) {
+        if (m_nrt.use_count() <= 0  || !is_ready_for_inf(m_nrt.get())) {
             qDebug() << "NRT) There is no model";
             err_msg->critical(0,"Error", "Please choose model to inference.");
             return;
         }
 
-        if (m_nrt->get_executor_status() != nrt::STATUS_SUCCESS){
-            qDebug() << "NRT) There is no executor";
-            err_msg->critical(0, "Error", "Please wait for the model executor to be created.");
+        if(inf_mode_status == INF_MODE_DET_CLA && m_nrt_ensmble.use_count() > 0 && !is_ready_for_inf(m_nrt_ensmble.get())){
+            qDebug() << "NRT) There is no model";
+            err_msg->critical(0,"Error", "Please choose model to inference.");
             return;
         }
-
-        {
-            std::unique_lock<std::mutex> lock(m_save_info._mutex);
-            m_save_info.save_path = img_save_path;
-        }
-
-        // DB save or not
-
-
 
         ui->btn_cam_mode->setEnabled(false);
 
         qDebug() << "IMG Mode) Play";
 
-        setImgInference(true);
+        ui->cbx_set_show_time->setEnabled(false);
+        ui->edit_set_show_time->setEnabled(false);
+        ui->lab_set_show_time->setEnabled(false);
+
+        ui->com_image_list->setCurrentIndex(0);
+        ui->com_image_list->setEditable(false);
+
+        ui->spb_img_cur_idx->setValue(0);
+        ui->spb_img_cur_idx->setReadOnly(true);
 
         if (m_timer.use_count() <= 0)
             m_timer = make_shared<QTimer>(this);
-
         connect(m_timer.get(), SIGNAL(timeout()), this, SLOT(showResult()));
 
         showResult();
@@ -2261,7 +2232,10 @@ void MainWindow::on_btn_img_play_clicked()
     else {          // Already Connected
         if (!m_timer->isActive()) {
             qDebug() << "IMG Mode) Replay";
-            setImgShowTimeEditEnable(false);
+            ui->cbx_set_show_time->setEnabled(false);
+            ui->edit_set_show_time->setEnabled(false);
+            ui->lab_set_show_time->setEnabled(false);
+
             if (ui->cbx_set_show_time->isChecked()) {
                 if (ui->edit_set_show_time->text() == "") {
                     err_msg->critical(0,"Error", "Please set show time or unselect set show time.");
@@ -2281,6 +2255,11 @@ void MainWindow::on_btn_img_play_clicked()
         }
     }
 
+    ui->rad_img_rtmode->setEnabled(false);
+    ui->rad_img_save_mode->setEnabled(false);
+
+    img_inf_ing_flag = true;
+
     delete err_msg;
 }
 
@@ -2288,13 +2267,16 @@ void MainWindow::on_btn_img_pause_clicked()
 {
     if (m_timer.use_count() <= 0)
         return;
-    img_inf_ing_flag = true;
+    img_inf_ing_flag = false;
     if (m_timer->isActive()) {
         qDebug() << "CAM Mode) Pause";
         m_timer->stop();
     }
 
-    setImgShowTimeEditEnable(true);
+    ui->cbx_set_show_time->setEnabled(true);
+    ui->edit_set_show_time->setEnabled(true);
+    ui->lab_set_show_time->setEnabled(true);
+
 }
 
 void MainWindow::on_btn_img_stop_clicked()
@@ -2309,30 +2291,28 @@ void MainWindow::on_btn_img_stop_clicked()
 
     setTabelColumn(false);
     ui->lab_result_info->setText("There is no table to show.");
-    inf_img_list.clear();
 
-    ui->edit_img_input->setText("");
-    ui->edit_img_output->setText("");
-    if(m_input_path.use_count() > 0){
-        m_input_path.reset();
-    }
-    if(m_output_path.use_count() > 0){
-        m_output_path.reset();
-    }
+    inf_image_id.clear();
+    inf_image_list.clear();
+    ui->com_image_list->clear();
+    ui->com_image_list->hide();
 
-    ui->edit_img_name->setText("");
+    ui->spb_img_cur_idx->hide();
+    ui->lab_img_total_num->hide();
+
     ui->cbx_set_show_time->setChecked(false);
     ui->edit_set_show_time->setText("");
-    ui->spb_img_cur_idx->setRange(0, 0);
-    ui->lab_img_total_num->setText(" /  TOTAL");
-
-    setImgInference(false);
-    setImgShowTimeEditEnable(false);
-    setImgResultShow(false);
 
     ui->lab_show_res->setText("Please Select CAM or IMG folder.");
     ui->edit_show_class->setText("");
     ui->edit_show_inf->setText("");
+
+    ui->Img_Option->setCurrentWidget(ui->SelectImagesetPage);
+
+    ui->rad_img_rtmode->setChecked(true);
+    ui->rad_img_save_mode->setChecked(false);
+    ui->rad_img_rtmode->setEnabled(true);
+    ui->rad_img_save_mode->setEnabled(true);
 
     if (m_nrt.use_count()>0 && m_nrt->get_model_status() == nrt::STATUS_SUCCESS && m_nrt->get_model_type() == "OCR") {
         /*for (int r = 0; r < ui->tableWidget_class->rowCount(); r++) {
@@ -2345,55 +2325,35 @@ void MainWindow::on_btn_img_stop_clicked()
             }
         }*/
     }
-}
 
-void MainWindow::on_spb_img_cur_idx_valueChanged(int cur_idx)
-{
-    if (img_inf_ing_flag)
-        return;
-    if (cur_idx < 1 || cur_idx > inf_img_list.size()) {
-        return;
-    }
-    QString cur_img_path = inf_img_list[cur_idx-1];
-    QStringList path_split = inf_img_list[cur_idx-1].split(QLatin1Char(PathSeparator[0]));
-    QString cur_img_name = path_split.at(path_split.size()-1);
-    path_split.pop_back();
-    std::string new_img_path = (*m_output_path + QString(PathSeparator[0]) + QString::fromStdString(PRED_FOL) + cur_img_name).toStdString();
-    cv::Mat cur_img = cv::imread(new_img_path, cv::IMREAD_COLOR);
-    if (cur_img.empty())
-        return;
-    cv::cvtColor(cur_img, cur_img, COLOR_RGB2BGR);
-    QImage m_qimage = QImage((const unsigned char*) (cur_img.data), cur_img.cols, cur_img.rows, cur_img.step, QImage::Format_RGB888);
-    QPixmap m_qpixmap = QPixmap::fromImage(m_qimage);
-    ui->lab_show_res->setPixmap(m_qpixmap.scaled(ui->lab_show_res->width(), ui->lab_show_res->height(), Qt::KeepAspectRatio));
-    ui->edit_img_name->setText(cur_img_name);
+    ui->btn_img_play->setEnabled(true);
+    ui->btn_img_pause->setEnabled(true);
 }
 
 void MainWindow::on_com_cam_input_select_currentTextChanged(const QString &text){
     if(text.toStdString() == SINGLE_VIDEO_TEXT){
-        video_mode_flag = true;
-        cam_mode_flag = false;
         ui->btn_cam_select->setText("Select Video File");
-        if(ui->com_video_list->isEnabled()){
-            video_list.clear();
-            ui->com_video_list->clear();
-        }
     }
     else if(text.toStdString() == VIDEO_FOLDER_TEXT){
-        video_mode_flag = true;
-        cam_mode_flag = false;
         ui->btn_cam_select->setText("Select Video Folder");
     }
     else if(text.toStdString() == CAMERA_TEXT){
-        video_mode_flag = false;
-        cam_mode_flag = true;
         ui->btn_cam_select->setText("Select Camera");
-        if(ui->com_video_list->isEnabled()){
-            video_list.clear();
-            ui->com_video_list->clear();
-            ui->com_video_list->hide();
-        }
     }
+
+    if(ui->com_video_list->isEnabled()){
+        video_list.clear();
+        ui->com_video_list->clear();
+        ui->com_video_list->hide();
+    }
+
+    if(m_videoInputCap.isOpened()){
+        m_videoInputCap.release();
+    }
+
+    media_mode = MEDIA_MODE_NONE;
+
+    setCamControlEnabled(false);
 }
 
 void MainWindow::on_com_video_list_currentTextChanged(const QString& text){
@@ -2461,31 +2421,41 @@ void MainWindow::on_btn_select_single_mode_clicked()
     QSqlTableModel* modelsTableModel = new QSqlTableModel(this, db);
     modelsTableModel->setTable("Models");
     modelsTableModel->select();
-    modelsTableModel->setHeaderData(0, Qt::Horizontal, "Name");
-    modelsTableModel->setHeaderData(1, Qt::Horizontal, "Created On");
-    modelsTableModel->setHeaderData(2, Qt::Horizontal, "Model Path");
-    modelsTableModel->setHeaderData(3, Qt::Horizontal, "Type");
-    modelsTableModel->setHeaderData(4, Qt::Horizontal, "Platform");
-    modelsTableModel->setHeaderData(5, Qt::Horizontal, "Search Space");
-    modelsTableModel->setHeaderData(6, Qt::Horizontal, "Inference Level");
+    modelsTableModel->setHeaderData(1, Qt::Horizontal, "Name");
+    modelsTableModel->setHeaderData(2, Qt::Horizontal, "Created On");
+    modelsTableModel->setHeaderData(4, Qt::Horizontal, "Type");
+    modelsTableModel->setHeaderData(5, Qt::Horizontal, "Platform");
+    modelsTableModel->setHeaderData(6, Qt::Horizontal, "Search Space");
+    modelsTableModel->setHeaderData(7, Qt::Horizontal, "Inference Level");
 
     QTableView* view = new QTableView;
     view->setModel(modelsTableModel);
-    view->setEditTriggers(QAbstractItemView::NoEditTriggers);
     view->hideColumn(0);
+    view->hideColumn(3);
+    view->setEditTriggers(QAbstractItemView::NoEditTriggers);
     view->setSelectionBehavior(QAbstractItemView::SelectRows);
     view->setSelectionMode(QAbstractItemView::SingleSelection);
+    view->setEnabled(false);
+
+    view->verticalHeader()->hide();
+    view->horizontalHeader()->show();
+    view->horizontalHeader()->resizeSections(QHeaderView::ResizeToContents);
+    view->setMinimumWidth(view->horizontalHeader()->width());
+    view->horizontalHeader()->setStretchLastSection(true);
+
+    connect(existingModel, SIGNAL(toggled(bool)), view, SLOT(setEnabled(bool)));
     root_cont->addWidget(view);
-    view->hide();
 
     QDialogButtonBox*btnbox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
                                                    Qt::Horizontal, &dialog);
     connect(btnbox, SIGNAL(accepted()), &dialog, SLOT(accept()));
     connect(btnbox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+    connect(newModel, SIGNAL(toggled(bool)), view->selectionModel(), SLOT(clearSelection()));
+
     root_cont->addWidget(btnbox);
     dialog.setLayout(root_cont);
 
-    QString modelPath;
+    QString modelPath = "";
     QString modelName;
     if(dialog.exec() == QDialog::Accepted){
         if(newModel->isChecked()){
@@ -2494,7 +2464,7 @@ void MainWindow::on_btn_select_single_mode_clicked()
             modelName = modelPath.split('/').last();
             // modelId is set later after the NrtExe object is created.(in the set_model_completed() function)
         }
-        else if(existingModel->isChecked()){
+        else if(view->selectionModel()->hasSelection()){
             int rowID = view->selectionModel()->currentIndex().row();
             int modelId = view->model()->index(rowID, 0).data().toInt();
             modelPath = m_db->getModelPath(modelId);
@@ -2503,7 +2473,8 @@ void MainWindow::on_btn_select_single_mode_clicked()
             qDebug() << "Model ID: " << modelId << ", Model Path: " << modelPath;
         }
     }
-    else{
+
+    if (modelPath == ""){
         QMessageBox::information(this,
                                  "Model Selection",
                                  "Failed to select model file",
@@ -2515,8 +2486,6 @@ void MainWindow::on_btn_select_single_mode_clicked()
                              "Model Selection",
                              modelName + " has been selected.",
                              QMessageBox::Ok);
-    if (modelPath == "")
-        return;
 
     if(m_nrt.use_count() > 0){
         m_nrt.reset();
@@ -2539,6 +2508,8 @@ void MainWindow::on_btn_select_single_mode_clicked()
 }
 
 void MainWindow::set_model_started(){
+    ready_for_inference = false;
+
     if ( ui->Model_Proper->currentIndex() == 0){ // Info Page -> Status Page
         ui->Model_Proper->setCurrentWidget(ui->Model_Status_Page);
     }
@@ -2549,7 +2520,6 @@ void MainWindow::set_model_started(){
     ui->btn_select_single_mode->setEnabled(false);
     ui->btn_select_ensmble_mode->setEnabled(false);
     ui->cbx_select_fp16->setEnabled(false);
-    ui->btn_model_settings->setEnabled(false);
 
     // Clear class label and inference time
     ui->edit_show_inf->clear();
@@ -2784,11 +2754,10 @@ void MainWindow::ensmble_model_start(){
     disconnect(futureWatcher.get(), SIGNAL(finished()), this, SLOT(ensmble_model_start()));
 
     // Make classification executor thread
-    connect(futureWatcherEns.get(), SIGNAL(started()), this, SLOT(set_model_started()));
     connect(futureWatcherEns.get(), SIGNAL(finished()), this, SLOT(setUiForEnsmble()));
-    QString cla_modelPath = m_db->getModelPath(ensmbleModelId);
-    qDebug() << "Classification model path: " << cla_modelPath;
-    futureEns = QtConcurrent::run(set_model_thread, m_nrt_ensmble.get(), cla_modelPath, ui->cbx_select_fp16->isChecked());
+    QString ens_modelPath = m_db->getModelPath(ensmbleModelId);
+    qDebug() << "Ensmble model path: " << ens_modelPath;
+    futureEns = QtConcurrent::run(set_model_thread, m_nrt_ensmble.get(), ens_modelPath, ui->cbx_select_fp16->isChecked());
     futureWatcherEns->setFuture(futureEns);
 }
 
@@ -2931,7 +2900,7 @@ void MainWindow::setUiForEnsmble(){
                 ui->table_model2_class_probs->setItem(i, PROB_COL, newItem);
             }
         }
-        else return;
+//        else return;
 
         // Chart View Setting
         if(inf_mode_status == INF_MODE_DET_CLA){
@@ -3008,9 +2977,13 @@ void MainWindow::setUiForEnsmble(){
     ui->btn_select_ensmble_mode->setEnabled(true);
     ui->cbx_select_fp16->setEnabled(true);
     ui->rad_cam_autosave->setEnabled(true);
-    ui->btn_model_settings->setEnabled(true);
+    ui->rad_img_save_mode->setEnabled(true);
+    ui->btn_model_settings->show();
 
     ui->inf_numbers->setVisible(true);
+
+    ready_for_inference = true;
+
     return;
 }
 
@@ -3057,7 +3030,7 @@ void MainWindow::setUiForSingle(){
         QString model_type = m_nrt->get_model_type();
         int NAME_COL = 0, PROB_COL = 1;
         int START_POINT;
-        if(model_type == "Detection"){
+        if(model_type == "Detection" || model_type == "Segmentation"){
             START_POINT = 1;
             ui->table_model1_class_probs->setRowCount(m_nrt->get_model_class_num() - START_POINT);
             ui->table_model1_class_probs->setColumnCount(2);
@@ -3080,11 +3053,38 @@ void MainWindow::setUiForSingle(){
                 newItem->setTextAlignment(Qt::AlignCenter);
                 ui->table_model1_class_probs->setItem(i, PROB_COL, newItem);
             }
+
+            // Color Column
+            COLOR_VECTOR.clear();
+            for (int i = 0; i < row_cnt; i++) {
+                QColor new_color = QColor(0, 0, 0);
+
+                if (i == 0)
+                    new_color = QColor(255, 0, 0);
+                else if(i == 1)
+                    new_color = QColor(0, 0, 255);
+                else if(i ==2)
+                    new_color = QColor(0, 255, 0);
+
+//                QVariant cVariant = new_color;
+//                QString cString = cVariant.toString();
+//                lab_color->setStyleSheet("background-color:"+cString+";");
+//                lab_color->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+//                lab_color->setContentsMargins(0,0,0,0);
+//                lab_color->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
+//                QHBoxLayout* cLayout = new QHBoxLayout(cWidget);
+//                cLayout->addWidget(lab_color);
+//                cLayout->setAlignment(Qt::AlignCenter);
+//                cLayout->setContentsMargins(30, 2, 30, 2);
+//                cWidget->setLayout(cLayout);
+//                ui->table_model2_class_probs->setCellWidget(i, COLOR_COL, cWidget);
+                COLOR_VECTOR.append(new_color);
+            }
         }
-        else return;
+//        else return;
 
         // Chart View Setting
-        if(inf_mode_status == INF_MODE_DET_CLA){
+        /*if(inf_mode_status == INF_MODE_DET_CLA){
             series = new QPieSeries();
             for(int i = 0; i < m_nrt_ensmble->get_model_class_num(); i++){
                 QString classname = m_nrt_ensmble->get_model_class_name(i);
@@ -3103,11 +3103,11 @@ void MainWindow::setUiForSingle(){
                 }
             }
 
-            /*QPieSlice* slice = series->slices().at(1);
+            QPieSlice* slice = series->slices().at(1);
             slice->setExploded();
             slice->setLabelVisible();
             slice->setPen(QPen(Qt::darkGreen, 2));
-            slice->setBrush(Qt::green);*/
+            slice->setBrush(Qt::green);
 
             chart = new QChart();
             chart->addSeries(series);
@@ -3135,7 +3135,7 @@ void MainWindow::setUiForSingle(){
         if(!ui->table_model1_class_probs->horizontalHeader()->isHidden()){
             totalRowHeight += ui->table_model1_class_probs->horizontalHeader()->height();
         }
-        ui->table_model1_class_probs->setMaximumHeight(totalRowHeight);
+        ui->table_model1_class_probs->setMaximumHeight(totalRowHeight);*/
 
         // Hide Model2 realted stuff
     }
@@ -3155,16 +3155,12 @@ void MainWindow::setUiForSingle(){
     ui->btn_select_ensmble_mode->setEnabled(true);
     ui->cbx_select_fp16->setEnabled(true);
     ui->rad_cam_autosave->setEnabled(true);
-    ui->btn_model_settings->setEnabled(true);
+    ui->rad_img_save_mode->setEnabled(true);
+    ui->btn_model_settings->show();
+
+    ready_for_inference = true;
 
     return;
-}
-
-void MainWindow::on_btn_model_settings_clicked(){
-    // threshold 값 수정, alert 기능
-    on_btn_cam_pause_clicked();
-
-    on_btn_cam_play_clicked();
 }
 
 void MainWindow::prob_threshold_dialog(NrtExe* nrt_ptr){
@@ -3296,5 +3292,630 @@ void MainWindow::size_threshold_dialog(NrtExe* nrt_ptr){
                     QMessageBox::Ok);
     }
     return;
+}
+
+bool MainWindow::on_btn_select_image_set_clicked(){
+    QDialog dialog(this);
+    QVBoxLayout* root_cont = new QVBoxLayout;
+    QGroupBox* groupbox = new QGroupBox;
+    QRadioButton* newImageFolder = new QRadioButton;
+    newImageFolder->setText("Select new images from folder.");
+    newImageFolder->setChecked(true);
+    QRadioButton* existingImageSet = new QRadioButton;
+    existingImageSet->setText("Select existing image set.");
+    QVBoxLayout *vbox = new QVBoxLayout;
+    vbox->addWidget(newImageFolder);
+    vbox->addWidget(existingImageSet);
+    vbox->addStretch(1);
+    groupbox->setLayout(vbox);
+    root_cont->addWidget(groupbox);
+
+    QSqlDatabase db = QSqlDatabase::database("main_thread");
+    QSqlTableModel* imageSetsTableModel = new QSqlTableModel(this, db);
+    imageSetsTableModel->setTable("ImageSets");
+    imageSetsTableModel->select();
+    imageSetsTableModel->setHeaderData(1, Qt::Horizontal, "Name");
+    imageSetsTableModel->setHeaderData(2, Qt::Horizontal, "Created On");
+    imageSetsTableModel->setHeaderData(3, Qt::Horizontal, "Updated On");
+
+    QTableView* view = new QTableView;
+    view->setModel(imageSetsTableModel);
+    view->hideColumn(0);
+    view->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    view->setSelectionBehavior(QAbstractItemView::SelectRows);
+    view->setSelectionMode(QAbstractItemView::SingleSelection);
+    view->setEnabled(false);
+
+    view->verticalHeader()->hide();
+    view->horizontalHeader()->show();
+    view->horizontalHeader()->resizeSections(QHeaderView::ResizeToContents);
+    view->setMinimumWidth(view->horizontalHeader()->width());
+    view->horizontalHeader()->setStretchLastSection(true);
+
+    connect(existingImageSet, SIGNAL(toggled(bool)), view, SLOT(setEnabled(bool)));
+    connect(newImageFolder, SIGNAL(toggled(bool)), view->selectionModel(), SLOT(clearSelection()));
+    root_cont->addWidget(view);
+
+    QDialogButtonBox*btnbox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
+                                                   Qt::Horizontal, &dialog);
+    connect(btnbox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+    connect(btnbox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+
+    root_cont->addWidget(btnbox);
+    dialog.setLayout(root_cont);
+
+    int imageSetId = -1;
+    QString imageSetName = "";
+
+    if(dialog.exec() == QDialog::Accepted){
+        inf_image_id.clear();
+        inf_image_list.clear();
+        ui->com_image_list->clear();
+
+        if(newImageFolder->isChecked()){
+            QMessageBox *err_msg = new QMessageBox;
+            err_msg->setFixedSize(600, 400);
+
+            QString inputPath = QFileDialog::getExistingDirectory(
+                        this,
+                        tr("Select Input Folder"),
+                        QDir::homePath());
+
+            if (inputPath.isNull())
+                return false;
+
+            QStringList img_filters;
+            img_filters << "*.bmp" << "*.dib"
+                        << "*.jpg" << "*.jpeg" << "*.jpe" << "*.jp2"
+                        << "*.png" << "*.webp"
+                        << "*.pbm" << "*.pgm" << "*.ppm" << "*.pxm" << "*.pnm"
+                        << "*.tiff" << "*.tif"
+                        << "*.sr" << "*.ras"
+                        << "*.hdr" << "*.pic";
+
+            QDirIterator input_it(
+                        inputPath,
+                        img_filters,
+                        QDir::AllEntries | QDir::NoDotAndDotDot,
+                        QDirIterator::Subdirectories);
+
+            if(!input_it.hasNext()){
+                err_msg->critical(0,"Error", "There are no image files to inference.");
+                return false;
+            }
+
+            bool ok;
+            imageSetName = QInputDialog::getText(this,"Image Selection",
+                                                 "Image Set Name", QLineEdit::Normal,
+                                                 "IMG_" + QDateTime::currentDateTime().toString("dd-MM-yyyy hh:mm:ss") + "_ImageSet", &ok);
+            if(imageSetName == ""){
+                imageSetName = "IMG_" + QDateTime::currentDateTime().toString("dd-MM-yyyy hh:mm:ss") + "_ImageSet";
+            }
+
+            imageSetId = m_db->InsertImageSet(imageSetName);
+
+            QVector<int> temp_id_vector;
+            QVector<QString> temp_image_path_vector;
+            QVector<QString> temp_image_name_vector;
+
+            while(input_it.hasNext()){
+                QString image_path = input_it.next();
+                QString image_name = image_path.split('/').last();
+
+                // insert into image set database
+                QUuid u_id = QUuid::createUuid();
+                QString image_uid = u_id.toString().remove(QChar('{')).remove(QChar('}')) + QString(IMG_FORMAT.c_str());
+                QString new_image_path = imagesDir.absoluteFilePath(image_uid);
+                if(!QFile::exists(image_path)){
+                    continue;
+                }
+                QFile::copy(image_path, new_image_path);
+
+                cv::Mat img = cv::imread(new_image_path.toLocal8Bit().constData());
+                int imageId = m_db->InsertImage(new_image_path, image_name, img.rows, img.cols, imageSetId, "main_thread");
+
+                temp_id_vector.append(imageId);
+                temp_image_path_vector.append(new_image_path);
+                temp_image_name_vector.append(image_name);
+            }
+
+            if(imageSetName.contains("expo", Qt::CaseInsensitive)){
+                macro_flag = true;
+                macro_cam_flag = false;
+
+                unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+                std::shuffle(temp_id_vector.begin(), temp_id_vector.end(), std::default_random_engine(seed));
+                std::shuffle(temp_image_path_vector.begin(), temp_image_path_vector.end(), std::default_random_engine(seed));
+                std::shuffle(temp_image_name_vector.begin(), temp_image_name_vector.end(), std::default_random_engine(seed));
+            }
+            else{
+                macro_flag = false;
+            }
+
+            for(int i = 0; i < temp_id_vector.length(); i++){
+                if(i < 0 || i >= temp_image_path_vector.length()){
+                    qDebug() << "on_btn_select_image_set) vector out of range for temp_image_path.";
+                    return false;
+                }
+                if(i < 0 || i >= temp_image_name_vector.length()){
+                    qDebug() << "on_btn_select_image_set) vector out of range for temp_image_name.";
+                    return false;
+                }
+
+                inf_image_id.append(temp_id_vector[i]);
+                ui->com_image_list->addItem(temp_image_name_vector[i]);
+                inf_image_list.append(temp_image_path_vector[i]);
+            }
+        }
+
+        else if(view->selectionModel()->hasSelection()){
+            int row = view->selectionModel()->currentIndex().row();
+            imageSetId = view->model()->index(row, 0).data().toInt();
+            imageSetName = m_db->getImageSetName(imageSetId);
+
+            QVector<int> temp_id_vector = m_db->getImageIdVector(imageSetId, "main_thread");
+
+            if(imageSetName.contains("expo", Qt::CaseInsensitive)){
+                macro_flag = true;
+                macro_cam_flag = false;
+
+                //shuffle
+                unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+                std::shuffle(temp_id_vector.begin(), temp_id_vector.end(), std::default_random_engine(seed));
+            }
+            else{
+                macro_flag = false;
+            }
+
+            for(auto imageId : temp_id_vector){
+                inf_image_id.append(imageId);
+                inf_image_list.append(m_db->getImagePath(imageId, "main_thread"));
+                ui->com_image_list->addItem(m_db->getImageName(imageId));
+            }
+        }
+    }
+    else{
+        QMessageBox::information(this,
+                             "Image Selection",
+                             "Image selection has been canceled.",
+                             QMessageBox::Ok);
+        return false;
+    }
+
+    if(imageSetId == -1){
+        return false;
+    }
+
+    {
+        std::unique_lock<std::mutex> lock(m_save_info._mutex);
+        m_save_info.imageSetId = imageSetId;
+    }
+
+    if(newImageFolder->isChecked()){
+        QMessageBox::information(this,
+                             "Image Selection",
+                             "Selected " + QString::number(inf_image_list.length()) + "images.",
+                             QMessageBox::Ok);
+    }
+    else {
+        QMessageBox::information(this,
+                             "Image Selection",
+                             "Image set '" + imageSetName + "' has been selected.",
+                             QMessageBox::Ok);
+    }
+
+    ui->Img_Option->setCurrentWidget(ui->ImageInfoPage);
+
+    ui->btn_img_play->setEnabled(true);
+    ui->btn_img_pause->setEnabled(true);
+    ui->btn_img_stop->setEnabled(true);
+
+    ui->com_image_list->setEditable(true);
+    ui->com_image_list->show();
+
+    ui->spb_img_cur_idx->setReadOnly(false);
+    ui->spb_img_cur_idx->setRange(1, inf_image_list.length());
+    ui->spb_img_cur_idx->show();
+
+    ui->lab_img_total_num->setText("/ " + QString::number(inf_image_list.length()));
+    ui->lab_img_total_num->show();
+
+    ui->cbx_set_show_time->setEnabled(true);
+    ui->cbx_set_show_time->setChecked(false);
+
+    on_com_image_list_currentIndexChanged(0);
+
+    return true;
+}
+
+void MainWindow::on_com_image_list_currentIndexChanged(int index){
+    if(index < 0 || index >= inf_image_list.length()){
+        qDebug() << "on_com_image_list_currentIndexChanged) wrong index";
+        return;
+    }
+    ui->spb_img_cur_idx->setValue(index + 1);
+
+    cv::Mat img;
+    if(!img_inf_ing_flag && ui->rad_img_save_mode->isChecked()){
+        QString result_image_path = "";
+        {
+            std::unique_lock<std::mutex> lock(m_save_info._mutex);
+            result_image_path = m_db->getResultImagePath(inf_image_id[index], m_save_info.evaluationSetId, "main_thread");
+        }
+
+        if(!result_image_path.isEmpty()){
+            img = cv::imread(result_image_path.toLocal8Bit().constData());
+        }
+
+        else{
+            QString image_path = inf_image_list[index];
+            img = cv::imread(image_path.toLocal8Bit().constData());
+        }
+    }
+
+    if(!img_inf_ing_flag && ui->rad_img_rtmode->isChecked()){
+        QString image_path = inf_image_list[index];
+        img = cv::imread(image_path.toLocal8Bit().constData());
+    }
+
+    if(img.empty()){
+        return;
+    }
+
+    cv::cvtColor(img, img, cv::COLOR_RGB2BGR);
+    QImage m_qimage;
+    m_qimage = QImage((const unsigned char*) (img.data), img.cols, img.rows, img.step, QImage::Format_RGB888);
+    QPixmap m_qpixmap = QPixmap::fromImage(m_qimage);
+    ui->lab_show_res->setPixmap(m_qpixmap.scaled(ui->lab_show_res->width(), ui->lab_show_res->height(), Qt::KeepAspectRatio));
+}
+
+void MainWindow::on_spb_img_cur_idx_valueChanged(int i){
+    ui->com_image_list->setCurrentIndex(i-1);
+}
+
+void MainWindow::on_btn_model_settings_clicked(){
+    // threshold 값 수정, alert 기능
+    on_btn_cam_pause_clicked();
+
+    if(inf_mode_status == INF_MODE_SINGLE && m_nrt.use_count() > 0 && is_ready_for_inf(m_nrt.get())){
+        QString model_type = m_nrt->get_model_type();
+        if(model_type == "OCR" || model_type == "Anomaly"){
+            return;
+        }
+
+        else {
+            QDialog dialog(this);
+            QVBoxLayout* root_cont = new QVBoxLayout;
+
+            QFormLayout* model_form = new QFormLayout;
+            model_form->addRow(new QLabel("Model: "), new QLabel(m_nrt->get_model_name()));
+            model_form->addRow(new QLabel("Type: "), new QLabel(m_nrt->get_model_type()));
+            model_form->addRow(new QLabel("Platform: "), new QLabel(m_nrt->get_model_training_type()));
+            model_form->addRow(new QLabel("Search Space Level: "), new QLabel(m_nrt->get_model_search_level()));
+            model_form->addRow(new QLabel("Inference Level: "), new QLabel(m_nrt->get_model_inference_level()));
+            root_cont->addLayout(model_form);
+            root_cont->addSpacing(10);
+
+            root_cont->addWidget(new QLabel("Prob threshold"));
+            QTableWidget* prob_thres = new QTableWidget;
+            prob_thres->setRowCount(m_nrt->get_model_class_num());
+            prob_thres->setColumnCount(2);
+            QStringList header_labels = {"Class", "Prob Threshold"};
+            prob_thres->setHorizontalHeaderLabels(header_labels);
+
+            for(int i = 0; i < m_nrt->get_model_class_num(); i++){
+                QTableWidgetItem* class_name = new QTableWidgetItem;
+                class_name->setText(m_nrt->get_model_class_name(i));
+                class_name->setTextAlignment(Qt::AlignCenter);
+                prob_thres->setItem(i, 0, class_name);
+
+                QTableWidgetItem* prob = new QTableWidgetItem;
+                int cur_prob_thres = 0;
+                if(i < m_nrt->prob_threshold.length()){
+                    cur_prob_thres = m_nrt->prob_threshold[i];
+                }
+                prob->setText(QString::number(cur_prob_thres) + "%");
+                prob->setTextAlignment(Qt::AlignCenter);
+                prob_thres->setItem(i, 1, prob);
+            }
+
+            // table view ui 조정
+            prob_thres->verticalHeader()->hide();
+            prob_thres->horizontalHeader()->show();
+            prob_thres->horizontalHeader()->resizeSections(QHeaderView::ResizeToContents);
+//            prob_thres->setMinimumWidth(prob_thres->horizontalHeader()->width());
+//            prob_thres->horizontalHeader()->setStretchLastSection(true);
+            verticalResizeTable(prob_thres);
+            root_cont->addWidget(prob_thres);
+            root_cont->addSpacing(10);
+
+            connect(prob_thres,
+                    QOverload<const int, const int>::of(&QTableWidget::cellChanged),
+                    [prob_thres](const int row, const int col)
+                    {
+                        if(col == 1){
+                            QString input = prob_thres->item(row, col)->text();
+                            input = input.remove(QRegExp("[^\\d]"));
+
+                            float value = 0;
+                            bool ok;
+                            value = input.toFloat(&ok);
+                            if(!ok){
+                                qDebug() << "Failed to convert to int";
+                                value = 0;
+                            }
+                            prob_thres->item(row, col)->setText(QString::number(value) + QString("%"));
+                        }
+                    });
+
+            QTableWidget* size_thres = new QTableWidget;
+            if(model_type == "Segmentation" || model_type == "Detection"){
+                root_cont->addWidget(new QLabel("Size threshold"));
+                size_thres->setRowCount(m_nrt->get_model_class_num());
+                size_thres->setColumnCount(4);
+                QStringList header_labels = {"Class", "Height", "AND/OR", "Width"};
+                size_thres->setHorizontalHeaderLabels(header_labels);
+
+                for(int i = 0; i < m_nrt->get_model_class_num(); i++){
+                    QTableWidgetItem* class_name = new QTableWidgetItem;
+                    class_name->setText(m_nrt->get_model_class_name(i));
+                    class_name->setTextAlignment(Qt::AlignCenter);
+                    size_thres->setItem(i, 0, class_name);
+
+                    QTableWidgetItem* width = new QTableWidgetItem;
+                    int cur_width = 0;
+                    if(i < m_nrt->size_threshold.length()){
+                        cur_width = m_nrt->size_threshold[i].second;
+                    }
+                    width->setText(QString::number(cur_width));
+                    width->setTextAlignment(Qt::AlignCenter);
+                    size_thres->setItem(i, 1, width);
+
+                    QTableWidgetItem* conj = new QTableWidgetItem;
+                    QString cur_conj = "AND";
+                    if(i < m_nrt->size_thres_conjunction.length()){
+                        cur_conj = m_nrt->size_thres_conjunction[i];
+                    }
+                    conj->setText(cur_conj);
+                    conj->setTextAlignment(Qt::AlignCenter);
+                    size_thres->setItem(i, 2, conj);
+
+                    QTableWidgetItem* height = new QTableWidgetItem;
+                    int cur_height = 0;
+                    if(i < m_nrt->size_threshold.length()){
+                        cur_height = m_nrt->size_threshold[i].first;
+                    }
+                    height->setText(QString::number(cur_height));
+                    height->setTextAlignment(Qt::AlignCenter);
+                    size_thres->setItem(i, 3, height);
+
+                    // table view ui 조정
+                    size_thres->verticalHeader()->hide();
+                    size_thres->horizontalHeader()->show();
+//                    size_thres->horizontalHeaderItem(0)
+//                    size_thres->setColumnWidth(1, 100);
+                    size_thres->horizontalHeader()->resizeSections(QHeaderView::ResizeToContents);
+                    size_thres->setMaximumWidth(size_thres->horizontalHeader()->width());
+//                    size_thres->horizontalHeader()->setStretchLastSection(true);
+                    verticalResizeTable(size_thres);
+                }
+
+                root_cont->addWidget(size_thres);
+
+                connect(size_thres,
+                        QOverload<const int, const int>::of(&QTableWidget::cellChanged),
+                        [size_thres](const int row, const int col)
+                        {
+                            // Height, Width
+                            if(col == 1 || col == 3){
+                                QString input = size_thres->item(row, col)->text();
+                                input = input.remove(QRegExp("[^\\d]"));
+
+                                int value = 0;
+                                bool ok;
+                                value = input.toInt(&ok);
+                                if(!ok){
+                                    qDebug() << "Failed to convert to int";
+                                    value = 0;
+                                }
+                                size_thres->item(row, col)->setText(QString::number(value));
+                            }
+                        });
+
+                connect(size_thres,
+                        QOverload<const int, const int>::of(&QTableWidget::cellClicked),
+                        [size_thres](const int row, const int col)
+                        {
+                            // AND, OR
+                            if(col == 2){
+                                QString cur_txt = size_thres->item(row, col)->text();
+                                size_thres->item(row, col)->setText((cur_txt == "AND" ? "OR" : "AND"));
+                            }
+                        });
+            }
+
+            QDialogButtonBox*btnbox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
+                                                           Qt::Horizontal, &dialog);
+            connect(btnbox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+            connect(btnbox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+            root_cont->addWidget(btnbox);
+            dialog.setLayout(root_cont);
+
+            if(dialog.exec() == QDialog::Accepted){
+                m_nrt->prob_threshold.clear();
+                for(int i = 0; i < prob_thres->rowCount(); i++){
+                    QString prob = prob_thres->item(i, 1)->text().remove(QChar('%'));
+                    bool ok;
+                    float prob_val = prob.toFloat(&ok);
+                    if(!ok){
+                        prob_val = 0.0;
+                    }
+                    m_nrt->prob_threshold.append(prob_val);
+                }
+
+                m_nrt->size_threshold.clear();
+                for(int i = 0; i < size_thres->rowCount(); i++){
+                    QString h_thres = size_thres->item(i, 1)->text();
+                    bool ok;
+                    int h_thres_val = h_thres.toInt(&ok);
+                    if(!ok){
+                        h_thres_val = 0;
+                    }
+
+                    QString w_thres = size_thres->item(i, 3)->text();
+                    int w_thres_val = w_thres.toInt(&ok);
+                    if(!ok){
+                        w_thres_val = 0;
+                    }
+
+                    m_nrt->size_threshold.append(qMakePair(h_thres_val, w_thres_val));
+
+                    QString conj = size_thres->item(i, 2)->text();
+                    m_nrt->size_thres_conjunction.append(conj);
+                }
+            }
+        }
+    }
+    else if(inf_mode_status == INF_MODE_DET_CLA){
+
+    }
+
+    on_btn_cam_play_clicked();
+}
+
+void MainWindow::on_rad_img_save_mode_toggled(bool checked){
+    if(checked){
+        // 새로 선택한 것
+        if(ui->rad_img_rtmode->isChecked()){
+            QMessageBox* err_msg = new QMessageBox;
+
+            // 아직 모델이 선택되지 않은 상태
+            if(!ready_for_inference){
+                ui->rad_img_save_mode->setChecked(false);
+                err_msg->setFixedSize(600, 400);
+                err_msg->critical(0,"Error", "Please choose model to inference");
+                return;
+            }
+
+            ui->rad_img_rtmode->setChecked(false);
+            img_save_flag = true;
+
+            // 아직 image set이 선택되지 않은 상태
+            if(ui->Img_Option->currentWidget() == ui->SelectImagesetPage){
+                if(!on_btn_select_image_set_clicked()){
+                    return;
+                }
+            }
+
+            int evaluationSetId = -1;
+            int imageSetId  = -1;
+            {
+                std::unique_lock<std::mutex> lock(m_save_info._mutex);
+                imageSetId = m_save_info.imageSetId;
+            }
+            if(inf_mode_status == INF_MODE_SINGLE){
+                evaluationSetId = m_db->getEvaluationSetID(imageSetId, currentModelId, -1);
+
+                if(evaluationSetId == -1){
+                    evaluationSetId = m_db->InsertEvaluationSet(imageSetId, currentModelId, -1);
+
+                    if(evaluationSetId == -1){
+                        qDebug() << "Evaluation set insert failed";
+                        return;
+                    }
+                    initJson(evaluationSetId);
+                }
+
+                else{
+                    bool init_json_flag = false;
+                    {
+                        std::unique_lock<std::mutex> lock(m_save_info._mutex);
+                        QString path = m_db->getEvalutionJsonPath(evaluationSetId);
+
+                        QFile& file = m_save_info.json_file;
+                        file.setFileName(path);
+
+                        if(!file.open(QIODevice::ReadWrite)){
+                            qDebug() << "Failed to open json file.";
+                            return;
+                        }
+
+                        QByteArray load_data = file.readAll();
+                        m_save_info.json_doc = QJsonDocument::fromJson(load_data);
+                        m_save_info.title = m_save_info.json_doc.object();
+                        if(m_save_info.title.empty()){
+                            init_json_flag = true; // mutex 때문에 block을 빠져나간 뒤에 initJson을 수행하게 함.
+                        }
+                        file.close();
+                    }
+                    if(init_json_flag){
+                        initJson(evaluationSetId);
+                    }
+                }
+            }
+            else if(inf_mode_status == INF_MODE_DET_CLA){
+                evaluationSetId = m_db->getEvaluationSetID(imageSetId, currentModelId, ensmbleModelId);
+            }
+
+            {
+                std::unique_lock<std::mutex> lock(m_save_info._mutex);
+                m_save_info.evaluationSetId = evaluationSetId;
+            }
+
+        }
+
+        //다시 선택한 것
+        else{
+            return;
+        }
+    }
+    else{
+        if(!ui->rad_img_rtmode->isChecked())
+            ui->rad_img_save_mode->setChecked(true);
+    }
+}
+
+void MainWindow::on_rad_img_rtmode_toggled(bool checked){
+    if(checked){
+        // 새로 선택한 것
+        if(ui->rad_img_save_mode->isChecked()){
+            ui->rad_img_save_mode->setChecked(false);
+            img_save_flag = false;
+        }
+
+        // 다시 선택한 것
+        else{
+            return;
+        }
+    }
+    else{
+        if(!ui->rad_img_save_mode->isChecked())
+            ui->rad_img_rtmode->setChecked(true);
+    }
+}
+
+void MainWindow::verticalResizeTable(QTableView* table_view){
+    // vertical resize table widget to contents
+    int totalRowHeight = 0;
+
+    // visible row height
+    int count =table_view->verticalHeader()->count();
+    for(int i=0; i < count; i++){
+        if(!table_view->verticalHeader()->isSectionHidden(i)){
+            totalRowHeight +=  table_view->verticalHeader()->sectionSize(i);
+        }
+    }
+
+    //scrollbar visibility
+    if(!table_view->horizontalScrollBar()->isHidden()){
+        totalRowHeight += table_view->horizontalScrollBar()->height();
+    }
+
+//    // horizontal header visibility
+//    if(!table_view->horizontalHeader()->isHidden()){
+//        totalRowHeight += table_view->horizontalHeader()->height();
+//    }
+
+    table_view->setMaximumHeight(totalRowHeight);
 }
 

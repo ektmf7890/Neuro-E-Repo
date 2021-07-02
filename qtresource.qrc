@@ -14,5 +14,6 @@
         <file>icons/table.png</file>
         <file>icons/unshow.png</file>
         <file>icons/untable.png</file>
+        <file>icons/model_settings.png</file>
     </qresource>
 </RCC>

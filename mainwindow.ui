@@ -226,6 +226,28 @@
               <number>2</number>
              </property>
              <item>
+              <widget class="QPushButton" name="btn_show_prediction">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>37</width>
+                 <height>37</height>
+                </size>
+               </property>
+               <property name="accessibleDescription">
+                <string/>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item>
               <spacer name="spa_filter">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
@@ -252,27 +274,43 @@
                  <height>37</height>
                 </size>
                </property>
+               <property name="font">
+                <font>
+                 <family>Ubuntu</family>
+                </font>
+               </property>
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="btn_show_prediction">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
+              <widget class="QSpinBox" name="spb_img_cur_idx">
+               <property name="font">
+                <font>
+                 <family>Ubuntu</family>
+                 <pointsize>10</pointsize>
+                </font>
                </property>
-               <property name="minimumSize">
-                <size>
-                 <width>37</width>
-                 <height>37</height>
-                </size>
-               </property>
-               <property name="accessibleDescription">
-                <string/>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="lab_img_total_num">
+               <property name="font">
+                <font>
+                 <family>Ubuntu</family>
+                 <pointsize>9</pointsize>
+                </font>
                </property>
                <property name="text">
-                <string/>
+                <string> /  TOTAL</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="com_image_list">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>37</height>
+                </size>
                </property>
               </widget>
              </item>
@@ -409,7 +447,7 @@
                   <property name="font">
                    <font>
                     <family>Ubuntu</family>
-                    <pointsize>12</pointsize>
+                    <pointsize>11</pointsize>
                    </font>
                   </property>
                   <property name="frameShape">
@@ -704,7 +742,7 @@
                 <item>
                  <widget class="QStackedWidget" name="Mode_Setting_Stack">
                   <property name="currentIndex">
-                   <number>0</number>
+                   <number>1</number>
                   </property>
                   <widget class="QWidget" name="Cam_Page">
                    <layout class="QVBoxLayout" name="verticalLayout_8">
@@ -790,13 +828,13 @@
                         <number>0</number>
                        </property>
                        <property name="leftMargin">
-                        <number>15</number>
+                        <number>9</number>
                        </property>
                        <property name="topMargin">
                         <number>0</number>
                        </property>
                        <property name="rightMargin">
-                        <number>15</number>
+                        <number>9</number>
                        </property>
                        <property name="bottomMargin">
                         <number>0</number>
@@ -886,6 +924,18 @@
                                </property>
                                <property name="text">
                                 <string>Auto Save Inference Results</string>
+                               </property>
+                              </widget>
+                             </item>
+                             <item>
+                              <widget class="QPushButton" name="btn_cam_save_settings">
+                               <property name="font">
+                                <font>
+                                 <family>Ubuntu</family>
+                                </font>
+                               </property>
+                               <property name="text">
+                                <string>Save Settings</string>
                                </property>
                               </widget>
                              </item>
@@ -1017,9 +1067,9 @@
                    </layout>
                   </widget>
                   <widget class="QWidget" name="Img_Page">
-                   <layout class="QVBoxLayout" name="verticalLayout_7" stretch="2,2,2,3">
+                   <layout class="QVBoxLayout" name="verticalLayout_7" stretch="0,0,3">
                     <property name="spacing">
-                     <number>10</number>
+                     <number>0</number>
                     </property>
                     <property name="leftMargin">
                      <number>0</number>
@@ -1034,192 +1084,231 @@
                      <number>0</number>
                     </property>
                     <item>
-                     <widget class="QWidget" name="Img_Input" native="true">
-                      <layout class="QHBoxLayout" name="horizontalLayout_18">
-                       <property name="topMargin">
-                        <number>15</number>
-                       </property>
-                       <property name="bottomMargin">
-                        <number>5</number>
-                       </property>
-                       <item>
-                        <widget class="QLabel" name="lab_img_input_select">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                           <horstretch>2</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="text">
-                          <string>Input Folder</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLineEdit" name="edit_img_input">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                           <horstretch>6</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="dragEnabled">
-                          <bool>true</bool>
-                         </property>
-                         <property name="readOnly">
-                          <bool>true</bool>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QPushButton" name="btn_img_input">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                           <horstretch>3</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="text">
-                          <string>Select Input Folder</string>
-                         </property>
-                        </widget>
-                       </item>
-                      </layout>
+                     <widget class="QStackedWidget" name="Img_Option">
+                      <widget class="QWidget" name="ImageInfoPage">
+                       <layout class="QHBoxLayout" name="horizontalLayout_21">
+                        <property name="leftMargin">
+                         <number>9</number>
+                        </property>
+                        <property name="topMargin">
+                         <number>15</number>
+                        </property>
+                        <property name="rightMargin">
+                         <number>9</number>
+                        </property>
+                        <property name="bottomMargin">
+                         <number>15</number>
+                        </property>
+                        <item>
+                         <spacer name="horizontalSpacer">
+                          <property name="orientation">
+                           <enum>Qt::Horizontal</enum>
+                          </property>
+                          <property name="sizeHint" stdset="0">
+                           <size>
+                            <width>40</width>
+                            <height>20</height>
+                           </size>
+                          </property>
+                         </spacer>
+                        </item>
+                        <item>
+                         <widget class="QCheckBox" name="cbx_set_show_time">
+                          <property name="sizePolicy">
+                           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                            <horstretch>0</horstretch>
+                            <verstretch>0</verstretch>
+                           </sizepolicy>
+                          </property>
+                          <property name="font">
+                           <font>
+                            <family>Ubuntu</family>
+                            <pointsize>9</pointsize>
+                           </font>
+                          </property>
+                          <property name="text">
+                           <string>Set Show Time</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QLineEdit" name="edit_set_show_time">
+                          <property name="sizePolicy">
+                           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                            <horstretch>0</horstretch>
+                            <verstretch>0</verstretch>
+                           </sizepolicy>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>30</width>
+                            <height>16777215</height>
+                           </size>
+                          </property>
+                          <property name="font">
+                           <font>
+                            <family>Ubuntu</family>
+                           </font>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QLabel" name="lab_set_show_time">
+                          <property name="font">
+                           <font>
+                            <family>Ubuntu</family>
+                            <pointsize>9</pointsize>
+                           </font>
+                          </property>
+                          <property name="text">
+                           <string>sec</string>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </widget>
+                      <widget class="QWidget" name="SelectImagesetPage">
+                       <layout class="QHBoxLayout" name="horizontalLayout_12">
+                        <item>
+                         <widget class="QPushButton" name="btn_select_image_set">
+                          <property name="sizePolicy">
+                           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                            <horstretch>7</horstretch>
+                            <verstretch>0</verstretch>
+                           </sizepolicy>
+                          </property>
+                          <property name="font">
+                           <font>
+                            <family>Ubuntu</family>
+                           </font>
+                          </property>
+                          <property name="text">
+                           <string>Select Images</string>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </widget>
                      </widget>
                     </item>
                     <item>
                      <widget class="QWidget" name="Img_Output" native="true">
                       <layout class="QHBoxLayout" name="horizontalLayout_19">
-                       <property name="topMargin">
-                        <number>5</number>
-                       </property>
-                       <property name="bottomMargin">
-                        <number>5</number>
-                       </property>
-                       <item>
-                        <widget class="QLabel" name="lab_img_output">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                           <horstretch>2</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="text">
-                          <string>Output Folder</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLineEdit" name="edit_img_output">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                           <horstretch>6</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="dragEnabled">
-                          <bool>true</bool>
-                         </property>
-                         <property name="readOnly">
-                          <bool>true</bool>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QPushButton" name="btn_img_output">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                           <horstretch>3</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="text">
-                          <string>Select Output Folder</string>
-                         </property>
-                        </widget>
-                       </item>
-                      </layout>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QWidget" name="Img_Option" native="true">
-                      <layout class="QHBoxLayout" name="horizontalLayout_21">
                        <property name="leftMargin">
-                        <number>15</number>
+                        <number>9</number>
                        </property>
                        <property name="topMargin">
-                        <number>5</number>
+                        <number>0</number>
                        </property>
                        <property name="rightMargin">
-                        <number>15</number>
+                        <number>9</number>
                        </property>
                        <property name="bottomMargin">
-                        <number>15</number>
+                        <number>0</number>
                        </property>
                        <item>
-                        <widget class="QLabel" name="lab_img_name">
+                        <widget class="QGroupBox" name="verticalGroupBox">
                          <property name="sizePolicy">
                           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                           <horstretch>1</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="text">
-                          <string>Image Name</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLineEdit" name="edit_img_name">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                           <horstretch>4</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <spacer name="horizontalSpacer_4">
-                         <property name="orientation">
-                          <enum>Qt::Horizontal</enum>
-                         </property>
-                         <property name="sizeHint" stdset="0">
-                          <size>
-                           <width>40</width>
-                           <height>20</height>
-                          </size>
-                         </property>
-                        </spacer>
-                       </item>
-                       <item>
-                        <widget class="QCheckBox" name="cbx_set_show_time">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                            <horstretch>2</horstretch>
                            <verstretch>0</verstretch>
                           </sizepolicy>
                          </property>
-                         <property name="text">
-                          <string>Set Show Time</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLineEdit" name="edit_set_show_time">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                           <horstretch>1</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLabel" name="lab_set_show_time">
-                         <property name="text">
-                          <string>sec</string>
-                         </property>
+                         <layout class="QVBoxLayout" name="verticalLayout_17">
+                          <property name="spacing">
+                           <number>0</number>
+                          </property>
+                          <property name="leftMargin">
+                           <number>0</number>
+                          </property>
+                          <property name="topMargin">
+                           <number>0</number>
+                          </property>
+                          <property name="rightMargin">
+                           <number>0</number>
+                          </property>
+                          <property name="bottomMargin">
+                           <number>0</number>
+                          </property>
+                          <item>
+                           <widget class="QWidget" name="horizontalWidget" native="true">
+                            <layout class="QHBoxLayout" name="horizontalLayout_6">
+                             <property name="leftMargin">
+                              <number>9</number>
+                             </property>
+                             <property name="topMargin">
+                              <number>9</number>
+                             </property>
+                             <property name="rightMargin">
+                              <number>9</number>
+                             </property>
+                             <property name="bottomMargin">
+                              <number>9</number>
+                             </property>
+                             <item>
+                              <widget class="QRadioButton" name="rad_img_rtmode">
+                               <property name="font">
+                                <font>
+                                 <family>Ubuntu</family>
+                                </font>
+                               </property>
+                               <property name="text">
+                                <string>Real Time Inference Only</string>
+                               </property>
+                              </widget>
+                             </item>
+                            </layout>
+                           </widget>
+                          </item>
+                          <item>
+                           <widget class="QWidget" name="hohrohro" native="true">
+                            <layout class="QHBoxLayout" name="horizontalLayout_11">
+                             <property name="leftMargin">
+                              <number>9</number>
+                             </property>
+                             <property name="topMargin">
+                              <number>9</number>
+                             </property>
+                             <property name="rightMargin">
+                              <number>9</number>
+                             </property>
+                             <property name="bottomMargin">
+                              <number>9</number>
+                             </property>
+                             <item>
+                              <widget class="QRadioButton" name="rad_img_save_mode">
+                               <property name="sizePolicy">
+                                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                                 <horstretch>2</horstretch>
+                                 <verstretch>0</verstretch>
+                                </sizepolicy>
+                               </property>
+                               <property name="font">
+                                <font>
+                                 <family>Ubuntu</family>
+                                </font>
+                               </property>
+                               <property name="text">
+                                <string>Save Inference Results</string>
+                               </property>
+                              </widget>
+                             </item>
+                             <item>
+                              <widget class="QPushButton" name="btn_img_save_settings">
+                               <property name="font">
+                                <font>
+                                 <family>Ubuntu</family>
+                                </font>
+                               </property>
+                               <property name="text">
+                                <string>Save Settings</string>
+                               </property>
+                              </widget>
+                             </item>
+                            </layout>
+                           </widget>
+                          </item>
+                         </layout>
                         </widget>
                        </item>
                       </layout>
@@ -1239,29 +1328,6 @@
                          <property name="sizeHint" stdset="0">
                           <size>
                            <width>40</width>
-                           <height>20</height>
-                          </size>
-                         </property>
-                        </spacer>
-                       </item>
-                       <item>
-                        <widget class="QSpinBox" name="spb_img_cur_idx"/>
-                       </item>
-                       <item>
-                        <widget class="QLabel" name="lab_img_total_num">
-                         <property name="text">
-                          <string> /  TOTAL</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <spacer name="spa_img_control_2">
-                         <property name="orientation">
-                          <enum>Qt::Horizontal</enum>
-                         </property>
-                         <property name="sizeHint" stdset="0">
-                          <size>
-                           <width>106</width>
                            <height>20</height>
                           </size>
                          </property>
@@ -1301,19 +1367,6 @@
                        </item>
                        <item>
                         <widget class="QPushButton" name="btn_img_stop">
-                         <property name="minimumSize">
-                          <size>
-                           <width>58</width>
-                           <height>42</height>
-                          </size>
-                         </property>
-                         <property name="text">
-                          <string/>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QPushButton" name="btn_img_result">
                          <property name="minimumSize">
                           <size>
                            <width>58</width>
@@ -1404,7 +1457,7 @@
                   <property name="font">
                    <font>
                     <family>Ubuntu</family>
-                    <pointsize>15</pointsize>
+                    <pointsize>13</pointsize>
                    </font>
                   </property>
                   <property name="text">
@@ -1545,7 +1598,7 @@
                          <property name="font">
                           <font>
                            <family>Ubuntu</family>
-                           <pointsize>11</pointsize>
+                           <pointsize>10</pointsize>
                           </font>
                          </property>
                          <property name="text">
@@ -1560,6 +1613,12 @@
                            <horstretch>3</horstretch>
                            <verstretch>0</verstretch>
                           </sizepolicy>
+                         </property>
+                         <property name="font">
+                          <font>
+                           <family>Ubuntu</family>
+                           <pointsize>10</pointsize>
+                          </font>
                          </property>
                          <property name="text">
                           <string/>
@@ -1598,7 +1657,7 @@
                          <property name="font">
                           <font>
                            <family>Ubuntu</family>
-                           <pointsize>11</pointsize>
+                           <pointsize>10</pointsize>
                           </font>
                          </property>
                          <property name="text">
@@ -1614,6 +1673,12 @@
                            <verstretch>0</verstretch>
                           </sizepolicy>
                          </property>
+                         <property name="font">
+                          <font>
+                           <family>Ubuntu</family>
+                           <pointsize>10</pointsize>
+                          </font>
+                         </property>
                          <property name="text">
                           <string/>
                          </property>
@@ -1624,13 +1689,25 @@
                        </item>
                        <item>
                         <widget class="QPushButton" name="btn_model_settings">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                           <horstretch>0</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                         <property name="minimumSize">
+                          <size>
+                           <width>40</width>
+                           <height>40</height>
+                          </size>
+                         </property>
                          <property name="font">
                           <font>
                            <family>Ubuntu</family>
                           </font>
                          </property>
                          <property name="text">
-                          <string>Settings</string>
+                          <string/>
                          </property>
                         </widget>
                        </item>
@@ -1655,7 +1732,7 @@
                       <property name="font">
                        <font>
                         <family>Ubuntu</family>
-                        <pointsize>13</pointsize>
+                        <pointsize>11</pointsize>
                        </font>
                       </property>
                       <property name="text">

@@ -160,7 +160,7 @@ nrt::NDBuffer seg_execute (nrt::NDBuffer image_buff, std::chrono::duration<doubl
         qDebug() << "Non Patch Mode";
 
         qDebug() << "Resize";
-        status = nrt::resize(image_buff, resized_image_buff, scale_factor, interpolty);
+        status = nrt::resize(image_buff, resized_image_buff, input_image_shape, interpolty);
         if (status != nrt::STATUS_SUCCESS) {
             qDebug() << "resize failed.  : " << QString(nrt::get_last_error_msg());
             return nrt::NDBuffer();
@@ -170,7 +170,7 @@ nrt::NDBuffer seg_execute (nrt::NDBuffer image_buff, std::chrono::duration<doubl
         auto start = std::chrono::high_resolution_clock::now();
         outputs = m_nrt->execute(resized_image_buff);
         auto end = std::chrono::high_resolution_clock::now();
-        inf_time = start - end;
+        inf_time = end- start;
 
         if(outputs.get_count() == 0) {
             qDebug() << "Execute failed" << QString(nrt::get_last_error_msg());

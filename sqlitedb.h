@@ -113,7 +113,7 @@ public:
     QSqlError ConfirmDBConnection(QString connection_name);
 
     int InsertImageSet(QString name);
-    int InsertImage(QString imagePath, QString name, int height, int width, int imageSetID);
+    int InsertImage(QString imagePath, QString name, int height, int width, int imageSetID, QString db_connection = "save_thread");
     int InsertModel(QString srcModelPath, QString name, QString type, QString platform, QString searchspace, QString inferencelevel);
     int InsertEvaluationSet(int imagesetID, int modelID, int ensmbleModelId);
     int InsertResultItem(QString resultImagePath, int imageID, int evaluationSetID);
@@ -124,6 +124,14 @@ public:
 
     QString getModelPath(int modelId);
     QString getModelName(int modelId);
+
+    QString getImageSetName(int imageSetId);
+
+    QVector<int> getImageIdVector(int imageSetId, QString db_connection = "main_thread");
+    QString getImagePath(int imageId, QString db_connection="main_thread");
+    QString getImageName(int imageId, QString db_connection="main_thread");
+
+    QString getResultImagePath(int imageId, int evaluationSetId, QString db_connection="main_thread");
 };
 
 #endif // SQLITEDB_H
