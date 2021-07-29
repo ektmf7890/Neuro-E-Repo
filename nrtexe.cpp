@@ -25,7 +25,7 @@ BoundingBox convert_to_bounding_box(const int* bcyxhw_ptr, const double h_ratio,
 }
 
 bool bbox_cmp(const BoundingBox & a, const BoundingBox & b) {
-    return (a.box_center_X < b.box_center_X) ? true : false;
+    return (a.box_center_X < b.box_center_X);
 }
 
 NrtExe::NrtExe(){};
@@ -36,18 +36,26 @@ int NrtExe::get_gpu_num() {
 }
 
 bool NrtExe::get_gpu_status() {
-    return (m_device.devtype == nrt::DevType::DEVICE_CUDA_GPU) ? true : false;
+    return (m_device.devtype == nrt::DevType::DEVICE_CUDA_GPU);
 }
 
 bool NrtExe::set_gpu(int gpuIdx) {
     m_device = nrt::Device::get_gpu_device(gpuIdx);
     if (m_device.devtype == nrt::DevType::DEVICE_CUDA_GPU)
         qDebug() << "NRT) Set GPU" << gpuIdx << ":" << get_gpu_name();
-    return (m_device.devtype == nrt::DevType::DEVICE_CUDA_GPU) ? true : false;
+    return (m_device.devtype == nrt::DevType::DEVICE_CUDA_GPU);
 }
 
 QString NrtExe::get_gpu_name() {
     return QString(m_device.get_device_name());
+}
+
+bool NrtExe::set_cpu(){
+    m_device = nrt::Device::get_cpu_device();
+    if(m_device.devtype == nrt::DevType::DEVICE_CPU){
+        qDebug() << "NRT) Set CPU";
+    }
+    return (m_device.devtype == nrt::DevType::DEVICE_CPU);
 }
 
 QString NrtExe::set_model(QString modelPath, bool fp16_flag) {
@@ -77,7 +85,7 @@ QString NrtExe::set_model(QString modelPath, bool fp16_flag) {
         m_model_ptr = make_shared<nrt::Model>(mModelPath, nrt::Model::MODELIO_OUT_PROB);
     }
     else if(modelType == nrt::OCR) {
-        m_model_ptr = make_shared<nrt::Model>(mModelPath, nrt::Model::MODELIO_OUT_ROTATION_DEGREE);
+        m_model_ptr = make_shared<nrt::Model>(mModelPath);
     }
     else if (modelType == nrt::ANOMALY){
         m_model_ptr = make_shared<nrt::Model>(mModelPath, nrt::Model::MODELIO_OUT_ANOMALY_SCORE);
@@ -90,30 +98,45 @@ QString NrtExe::set_model(QString modelPath, bool fp16_flag) {
         return QString("");
     }
 
-    PROB_IDX = -1; PRED_IDX = -1; CAM_IDX = -1; ANO_IDX = -1, ROT_IDX = -1;
+    PROB_IDX = -1; PRED_IDX = -1; CAM_IDX = -1; ANO_IDX = -1, ROT_IDX = -1; BOX_IDX = -1; // BOX 는 anomaly에서만 쓰임.
     int num_outputs = m_model_ptr->get_num_outputs();
     qDebug() << "NRT) Output Flags";
-    for (int i = 0; i < num_outputs; i++) {
-        nrt::Model::ModelIOFlag output_flag = m_model_ptr->get_output_flag(i);
-        if (output_flag == nrt::Model::MODELIO_OUT_PRED) {
-            PRED_IDX = i;
-            qDebug() << " - PRED_IDX:" << PRED_IDX;
+    if(modelType == nrt::ANOMALY){
+        for(int i = 0; i< num_outputs; i++){
+            QString output_name = m_model_ptr->get_output_name(i);
+            if(output_name == "output_anomaly_score"){
+                ANO_IDX = i;
+                qDebug() << " - ANO IDX:" << ANO_IDX;
+            }
+            else if(output_name == "output_anomaly_prediction"){
+                PRED_IDX = i;
+                qDebug() << " - PRED IDX:" << PRED_IDX;
+            }
+            else if(output_name == "output_boxes_bcyxhw"){
+                BOX_IDX = i;
+                qDebug() << " - BOX IDX:" << BOX_IDX;
+            }
         }
-        else if (output_flag == nrt::Model::MODELIO_OUT_PROB) {
-            PROB_IDX = i;
-            qDebug() << " - PROB_IDX:" << PROB_IDX;
-        }
-        else if (output_flag == nrt::Model::MODELIO_OUT_CAM) {
-            CAM_IDX = i;
-            qDebug() << " - CAM_IDX:" << CAM_IDX;
-        }
-        else if (output_flag == nrt::Model::MODELIO_OUT_ANOMALY_SCORE) {
-            ANO_IDX = i;
-            qDebug() << " - ANO_IDX:" << ANO_IDX;
-        }
-        else if (output_flag == nrt::Model::MODELIO_OUT_ROTATION_DEGREE) {
-            ROT_IDX = i;
-            qDebug() << " - ROT IDX:" << ROT_IDX;
+    }
+    else{
+        for (int i = 0; i < num_outputs; i++) {
+            nrt::Model::ModelIOFlag output_flag = m_model_ptr->get_output_flag(i);
+            if (output_flag == nrt::Model::MODELIO_OUT_PRED) {
+                PRED_IDX = i;
+                qDebug() << " - PRED_IDX:" << PRED_IDX;
+            }
+            else if (output_flag == nrt::Model::MODELIO_OUT_PROB) {
+                PROB_IDX = i;
+                qDebug() << " - PROB_IDX:" << PROB_IDX;
+            }
+            else if (output_flag == nrt::Model::MODELIO_OUT_CAM) {
+                CAM_IDX = i;
+                qDebug() << " - CAM_IDX:" << CAM_IDX;
+            }
+            else if (output_flag == nrt::Model::MODELIO_OUT_ROTATION_DEGREE) {
+                ROT_IDX = i;
+                qDebug() << " - ROT IDX:" << ROT_IDX;
+            }
         }
     }
 
@@ -136,8 +159,56 @@ QString NrtExe::set_model(QString modelPath, bool fp16_flag) {
     }
     qDebug() << "NRT) Executor Created";
 
+    set_roi_mask_info();
+
     return modelPath;
 }
+
+nrt::NDBuffer NrtExe::get_mask_info() {
+    return m_model_ptr->get_mask_info();
+}
+
+void NrtExe::set_roi_mask_info(){
+    nrt::NDBuffer roi_info = m_model_ptr->get_roi_info();
+    nrt::NDBuffer mask_info = m_model_ptr->get_mask_info();
+    nrt::NDBuffer org_size = m_model_ptr->get_preprocessing_input_size();
+
+    if(!org_size.empty()){
+        const int* org_size_ptr = org_size.get_at_ptr<int>();
+        org_height = org_size_ptr[0];
+        org_width = org_size_ptr[1];
+    }
+    else{
+        org_height = -1;
+        org_width = -1;
+    }
+
+    if(!roi_info.empty()){
+        int* roi_info_ptr = roi_info.get_at_ptr<int>();
+        qDebug() << "\tOriginal Height : " << roi_info_ptr[0];
+        qDebug() << "\tOriginal Width : " << roi_info_ptr[1];
+        qDebug() << "\tROI X : " << roi_info_ptr[2];
+        qDebug() << "\tROI Y : " << roi_info_ptr[3];
+        qDebug() << "\tROI Height : " << roi_info_ptr[4];
+        qDebug() << "\tROI Width : " << roi_info_ptr[5];
+
+        m_roi_info = roi_info;
+    }
+
+    if(!mask_info.empty()){
+        qDebug() << "Found mask_info";
+        auto mask_info_shp = mask_info.get_shape();
+        qDebug() << "mask_info_shp  [";
+        for (int j = 0; j < mask_info_shp.num_dim; j++)
+            qDebug() << mask_info_shp.dims[j] << " ";
+        qDebug() << "]";
+
+        // 이후, input되는 이미지 사이즈 비율에 맞추어 mask를 resize 할 수 있도록 mat으로 변환하여 저장.
+        cv::Mat m(mask_info_shp.dims[0], mask_info_shp.dims[1], CV_8UC1, (void*)(mask_info.get_data_ptr<unsigned char>()));
+        m.copyTo(m_mask);
+    }
+}
+
 
 int NrtExe::get_model_status() {
     return (m_model_ptr.use_count() > 0) ? m_model_ptr->get_status() : -1;

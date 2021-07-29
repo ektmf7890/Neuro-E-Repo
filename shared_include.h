@@ -44,7 +44,13 @@
 #include <QFile>
 #include <QIODevice>
 #include <QDateTime>
+
 #include <QtConcurrent/qtconcurrentrun.h>
+#include <QtConcurrent/qtconcurrentmap.h>
+#include <QtConcurrent/qtconcurrentthreadengine.h>
+#include <QtConcurrent/qtconcurrentfunctionwrappers.h>
+#include <QtConcurrent/QtConcurrentMap>
+
 #include <QTime>
 #include <QUuid>
 #include <QInputDialog>
@@ -65,6 +71,8 @@
 #include <QtCharts/QLegend>
 #include <QtCharts/QBarCategoryAxis>
 #include <QtCharts/QValueAxis>
+
+#include <QOperatingSystemVersion>
 
 QT_CHARTS_USE_NAMESPACE
 

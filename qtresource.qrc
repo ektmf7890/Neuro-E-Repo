@@ -15,5 +15,21 @@
         <file>icons/unshow.png</file>
         <file>icons/untable.png</file>
         <file>icons/model_settings.png</file>
+        <file>icons/slider_on.png</file>
+        <file>icons/slider_off.png</file>
+        <file>icons/filter_icon_143777.png</file>
+        <file>icons/pngkey.com-down-arrow-png-166376.png</file>
+        <file>icons/video.png</file>
+        <file>icons/repeat.png</file>
+        <file>icons/shuffle.png</file>
+        <file>icons/full_screen.png</file>
+        <file>icons/left_arrow.png</file>
+        <file>icons/right_arrow.png</file>
+        <file>icons/delete.png</file>
+        <file>icons/settings.png</file>
+        <file>icons/folder.png</file>
+        <file>icons/calendar.png</file>
+        <file>icons/upload.png</file>
+        <file>icons/cancel.png</file>
     </qresource>
 </RCC>

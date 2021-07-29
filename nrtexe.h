@@ -28,13 +28,22 @@ public:
     NrtExe();
     ~NrtExe();
 
+    nrt::NDBuffer get_mask_info();
+
     int get_gpu_num();
     bool get_gpu_status();
     bool set_gpu(int gpuIdx);
     QString get_gpu_name();
 
+    bool set_cpu();
+
     QString set_model(QString modelPath, bool fp16_flag);
+
+    void set_roi_mask_info();
+
+
     int get_model_status();
+
     QString get_model_name();
     QString get_model_type();
     QString get_model_training_type();
@@ -55,11 +64,21 @@ public:
 
     nrt::NDBufferList execute(nrt::NDBuffer resized_img_buffer);
 
-    int PROB_IDX = -1, PRED_IDX = -1, CAM_IDX = -1, ANO_IDX = -1, ROT_IDX=-1;
+    int PROB_IDX = -1, PRED_IDX = -1, CAM_IDX = -1, ANO_IDX = -1, ROT_IDX=-1, BOX_IDX=-1;
 
     QVector<float> prob_threshold;
     QVector<QPair<int, int>> size_threshold;
     QVector<QString> size_thres_conjunction;
+
+    nrt::NDBuffer m_roi_info;
+    cv::Mat m_mask;
+    int org_height;
+    int org_width;
+
+    int resized_roi_h;
+    int resized_roi_w;
+    int resized_roi_x;
+    int resized_roi_y;
 };
 
 

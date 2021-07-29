@@ -57,7 +57,7 @@ void UsbCam::selectCam() {
     if (cameras.count() < 1) {
         QMessageBox *err_msg = new QMessageBox;
         err_msg->setFixedSize(600, 400);
-        err_msg->critical(0,"Error", "There are no availablke CAMs.");
+        err_msg->critical(0,"Error", "There are no available cameras detected.");
         return;
     }
 
@@ -123,30 +123,35 @@ void UsbCam::selectCam() {
     if (selectDlg->exec() == QDialog::Accepted) {
         idx = camList->currentRow();
 
-        // Index that must be sent to the video cap object is listed in /dev/vedio*
-        std::string device_path = cameras.at(idx).deviceName().toStdString();
-        std::size_t i = device_path.find_last_of("/");
-        std::string device_name = device_path.substr(i+1, device_path.length());
+        // Linux) Index that must be sent to the video cap object is listed in /dev/vedio*
+        QString device_path = cameras.at(idx).deviceName();
+        qDebug() << "device path) " << device_path;
 
-        std::regex re("[^0-9]*([0-9]+)");
-        std::smatch match;
-        std::string device_num;
-        if (std::regex_match(device_name, match, re)){
-            for (size_t i = 0; i < match.size(); i++) {
-                device_num = match[i];
-             }
-        }
+        QString device_name = device_path.split('\\').last();
+        qDebug() << "device name) " << device_name;
 
-        int device_idx = -1;
-        try {
-            device_idx = std::stoi(device_num);
-        } catch (const std::exception& expn) {
-            std::cout << expn.what() << ": Out of integer's range\n";
-        } catch (...) {
-            std::cout << ": Unknown error\n";
-        }
+        // For linux
+//        std::regex re("[^0-9]*([0-9]+)");
+//        std::smatch match;
+//        std::string device_num;
+//        if (std::regex_match(device_name.toStdString(), match, re)){
+//            for (size_t i = 0; i < match.size(); i++) {
+//                device_num = match[i];
+//             }
+//        }
 
-        qDebug() << "User Select:" << cameras.at(idx).description();
+//        int device_idx = -1;
+//        try {
+//            device_idx = std::stoi(device_num);
+//        } catch (const std::exception& expn) {
+//            std::cout << expn.what() << ": Out of integer's range\n";
+//        } catch (...) {
+//            std::cout << ": Unknown error\n";
+//        }
+
+        // For Windows
+        int device_idx = idx;
+
         int w = resValue.at(resCombobox->currentIndex()).first;
         int h = resValue.at(resCombobox->currentIndex()).second;
         int fps = fpsLineEdit->text().toInt();
@@ -157,14 +162,39 @@ void UsbCam::selectCam() {
         return;
 }
 
-
-// videoIdx: GStreamer pipeline stream?
 void UsbCam::setVideoCapture(int videoIdx) {
     // NEED DEVELOP //
 //    cv::VideoCaptureAPIs videoCapAPI = cv::CAP_ANY;
 //    cv::VideoCaptureAPIs videoCapAPI = cv::CAP_V4L2;
+//    m_cap.open(videoIdx, cv::CAP_GSTREAMER);
 
-    m_cap.open(videoIdx, cv::CAP_GSTREAMER);
+    if(m_cap.open(videoIdx, cv::CAP_MSMF)){
+        qDebug() << "setVideoCapture) Video Backend: CAP_MSMF";
+        return;
+    }
+    if(m_cap.open(videoIdx, cv::CAP_VFW)){
+        qDebug() << "setVideoCapture) Video Backend: CAP_VFW";
+        return;
+    }
+    if(m_cap.open(videoIdx, cv::CAP_GSTREAMER)){
+        qDebug() << "setVideoCapture) Video Backend: CAP_GSTREAMER";
+        return;
+    }
+    if(m_cap.open(videoIdx, cv::CAP_V4L)){
+        qDebug() << "setVideoCapture) Video Backend: CAP_V4L";
+        return;
+    }
+    if(m_cap.open(videoIdx, cv::CAP_FFMPEG)){
+        qDebug() << "setVideoCapture) Video Backend: CAP_FFMPEG";
+        return;
+    }
+    if(m_cap.open(videoIdx, cv::CAP_DSHOW)){
+        qDebug() << "setVideoCapture) Video Backend: CAP_DSHOW";
+        return;
+    }
+
+    qDebug() << "setVideoCapture) No available video backends.";
+    return;
 }
 
 void UsbCam::setWidth(int width) {

@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui multimedia multimediawidgets sql charts
+QT       += core gui multimedia multimediawidgets sql charts concurrent
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -48,15 +48,15 @@ RESOURCES += \
 FORMS += \
         mainwindow.ui
 
-INCLUDEPATH += C:\\opencv\include
+INCLUDEPATH += D:\\opencv\include
 
 INCLUDEPATH += C:\\nrt\include
 
-Debug: LIBS += -LC:\\opencv\x64\vc16\lib \
-        -lopencv_world452d
+Debug: LIBS += -LD:\\opencv\x64\vc15\lib\
+        -lopencv_world347d
 
-Release: LIBS += -LC:\\opencv\x64\vc16\lib\
-        -lopencv_world452
+Release: LIBS += -LD:\\opencv\x64\vc15\lib\
+        -lopencv_world347
 
 LIBS += -LC:\\nrt\lib\release \
         -lnrt

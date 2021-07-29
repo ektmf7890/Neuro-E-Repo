@@ -7,31 +7,30 @@
 #include <QSqlError>
 #include <shared_include.h>
 
-static QDir imagesDir = QDir("resources/images");
+//static QDir imagesDir = QDir("resources/images");
 static QDir modelsDir = QDir("resources/models");
 static QDir evaluationsDir = QDir("resources/evaluations");
 static QDir resultImagesDir = QDir("resources/resultImages");
 
-const auto CREATE_TABLE_IMAGE_SETS = QLatin1String(
-            R"(
-            CREATE TABLE IF NOT EXISTS ImageSets(
-                Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                Name TEXT NOT NULL,
-                CreatedOn TEXT NOT NULL,
-                UpdatedOn TEXT NOT NULL,
-                NumOfImages integer DEFAULT 0)
-            )");
+//const auto CREATE_TABLE_IMAGE_SETS = QLatin1String(
+//            R"(
+//            CREATE TABLE IF NOT EXISTS ImageSets(
+//                Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+//                Name TEXT NOT NULL,
+//                CreatedOn TEXT NOT NULL,
+//                UpdatedOn TEXT NOT NULL,
+//                NumOfImages integer DEFAULT 0)
+//            )");
 
-const auto CREATE_TABLE_IMAGES = QLatin1String(R"(
+const auto CREATE_TABLE_IMAGES = QLatin1String(
+            R"(
             CREATE TABLE IF NOT EXISTS Images(
                 Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                 Name TEXT NOT NULL,
-                CreatedOn TEXT NOT NULL,
+                InferencedAt TEXT NOT NULL,
                 ImagePath TEXT NOT NULL,
                 Height INTEGER NOT NULL,
-                Width INTEGER NOT NULL,
-                ImageSetId INTEGER NOT NULL,
-                FOREIGN KEY(ImageSetId) REFERENCES ImageSets(Id) ON DELETE CASCADE)
+                Width INTEGER NOT NULL)
             )");
 
 const auto CREATE_TABLE_MODELS = QLatin1String(
@@ -51,14 +50,12 @@ const auto CREATE_TABLE_EVALUATION_SETS = QLatin1String(
             R"(
             CREATE TABLE IF NOT EXISTS EvaluationSets(
                 Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                CreatedOn TEXT NOT NULL,
-                ImageSetId INTEGER NOT NULL,
+                StartedOn TEXT NOT NULL,
                 ModelId INTEGER NOT NULL,
-                EnsmbleModelId INTEGER NOT NULL,
+                EnsembleModelId INTEGER NOT NULL,
                 EvaluationJsonPath TEXT NOT NULL,
-                FOREIGN KEY(ImageSetId) REFERENCES ImageSets(Id) ON DELETE CASCADE,
                 FOREIGN KEY(ModelId) REFERENCES Models(Id) ON DELETE CASCADE,
-                FOREIGN KEY(EnsmbleModelId) REFERENCES Models(Id) ON DELETE CASCADE)
+                FOREIGN KEY(EnsembleModelId) REFERENCES Models(Id) ON DELETE CASCADE)
             )");
 
 const auto CREATE_TABLE_RESULT_ITEMS = QLatin1String(
@@ -73,14 +70,19 @@ const auto CREATE_TABLE_RESULT_ITEMS = QLatin1String(
                 FOREIGN KEY(EvaluationSetId) REFERENCES EvaluationSets(Id) ON DELETE CASCADE)
             )");
 
-const auto INSERT_IMAGE_SET = QLatin1String(
+const auto CREATE_TABLE_SAVE_PATH = QLatin1String(
             R"(
-            INSERT OR REPLACE INTO ImageSets(Name, CreatedOn, UpdatedOn) VALUES(?, ?, ?)
+            CREATE TABLE IF NOT EXISTS SavePath(RootPath TEXT NOT NULL)
             )");
+
+//const auto INSERT_IMAGE_SET = QLatin1String(
+//            R"(
+//            INSERT OR REPLACE INTO ImageSets(Name, CreatedOn, UpdatedOn) VALUES(?, ?, ?)
+//            )");
 
 const auto INSERT_IMAGE = QLatin1String(
             R"(
-            INSERT OR REPLACE INTO Images(Name, CreatedOn, ImagePath, Height, Width, ImageSetId) VALUES(?, ?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO Images(Name, InferencedAt, ImagePath, Height, Width) VALUES(?, ?, ?, ?, ?)
             )");
 
 const auto INSERT_MODEL = QLatin1String(
@@ -90,7 +92,7 @@ const auto INSERT_MODEL = QLatin1String(
 
 const auto INSERT_EVALUATION_SET = QLatin1String(
             R"(
-            INSERT OR REPLACE INTO EvaluationSets(CreatedOn, ImageSetId, ModelId, EnsmbleModelId, EvaluationJsonPath) VALUES(?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO EvaluationSets(StartedOn, ModelId, EnsembleModelId, EvaluationJsonPath) VALUES(?, ?, ?, ?)
             )");
 
 const auto INSERT_RESULT_ITEM = QLatin1String(
@@ -112,26 +114,30 @@ public:
 
     QSqlError ConfirmDBConnection(QString connection_name);
 
-    int InsertImageSet(QString name);
-    int InsertImage(QString imagePath, QString name, int height, int width, int imageSetID, QString db_connection = "save_thread");
+//    int InsertImageSet(QString name);
+    bool ReplaceSavePath(QString path);
+    int InsertImage(QString imagePath, QString name, int height, int width, QString db_connection = "save_thread");
     int InsertModel(QString srcModelPath, QString name, QString type, QString platform, QString searchspace, QString inferencelevel);
-    int InsertEvaluationSet(int imagesetID, int modelID, int ensmbleModelId);
-    int InsertResultItem(QString resultImagePath, int imageID, int evaluationSetID);
+    int InsertEvaluationSet(QString StartedOn, int modelID, int ensembleModelId);
+    int InsertResultItem(QString resultImagePath, int imageID, int evaluationSetID, QString db_connectino = "save_thread");
 
-    QString getEvalutionJsonPath(int evaluationSetId);
+    bool DeleteModel(int modelId);
 
-    int getEvaluationSetID(int imageSetId, int modelId, int ensmbleModelId);
+    QString getSavePath(QString db_connection="main_thread");
+
+    QString getEvaluationJsonPath(int evaluationSetId);
+    QString getEvaluationSetStartedOn(int evaluationSetId, QString db_connection="main_thread");
+    int getEvaluationSetID(QString StartedOn, int modelId, int ensmebleModelId);
 
     QString getModelPath(int modelId);
     QString getModelName(int modelId);
+    QString getModelType(int modelId);
 
-    QString getImageSetName(int imageSetId);
-
-    QVector<int> getImageIdVector(int imageSetId, QString db_connection = "main_thread");
     QString getImagePath(int imageId, QString db_connection="main_thread");
     QString getImageName(int imageId, QString db_connection="main_thread");
 
-    QString getResultImagePath(int imageId, int evaluationSetId, QString db_connection="main_thread");
+    QString getResultImagePath(int resultItemId, QString db_connection="main_thread");
+    int getImageId(int resultItemId, QString db_connection="main_thread");
 };
 
 #endif // SQLITEDB_H
